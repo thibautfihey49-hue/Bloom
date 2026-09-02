@@ -19,7 +19,7 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
-      - name: 🔨 Compiler avec NOTRE Gradle 8.2 (PAS CELUI DE GITHUB !)
+      - name: 🔨 Compiler l'APK
         run: |
           chmod +x ./gradlew
           ./gradlew assembleDebug --no-daemon
