@@ -29,7 +29,7 @@ import org.osmdroid.views.overlay.Marker
 import kotlin.math.roundToInt
 
 class MainActivity : AppCompatActivity(), LocationListener {
-    
+
     private lateinit var mapView: MapView
     private lateinit var tvStatut: TextView
     private lateinit var tvMoi: TextView
@@ -41,11 +41,11 @@ class MainActivity : AppCompatActivity(), LocationListener {
     private lateinit var btnStart: Button
     private lateinit var btnStop: Button
     private lateinit var btnHideApp: ImageButton
-    
+
     private var marqueurMoi: Marker? = null
     private var marqueurLui: Marker? = null
     private lateinit var locationManager: LocationManager
-    
+
     private val PERMISSIONS_REQUEST = 1001
     private var suiviActif = false
     private var dernierePosition: Location? = null
@@ -95,15 +95,15 @@ class MainActivity : AppCompatActivity(), LocationListener {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        
+
         Configuration.getInstance().load(
             applicationContext,
             PreferenceManager.getDefaultSharedPreferences(applicationContext)
         )
-        
+
         setContentView(R.layout.activity_main)
         locationManager = getSystemService(Context.LOCATION_SERVICE) as LocationManager
-        
+
         initialiserVues()
         chargerNumeros()
         configurerCarte()
@@ -152,7 +152,7 @@ class MainActivity : AppCompatActivity(), LocationListener {
                 this, Manifest.permission.ACCESS_FINE_LOCATION
             ) != PackageManager.PERMISSION_GRANTED
         ) return
-        
+
         locationManager.requestLocationUpdates(
             LocationManager.GPS_PROVIDER, 1000, 1f, this
         )
@@ -163,13 +163,13 @@ class MainActivity : AppCompatActivity(), LocationListener {
 
     override fun onLocationChanged(nouvellePosition: Location) {
         mettreAJourMoi(nouvellePosition.latitude, nouvellePosition.longitude)
-        
+
         if (suiviActif && dernierePosition != null) {
             val distance = nouvellePosition.distanceTo(dernierePosition!!)
             derniereDistanceEnvoi += distance
-            
+
             tvDistance.text = "📡 Déplacement: ${derniereDistanceEnvoi.roundToInt()}m / 10m"
-            
+
             if (derniereDistanceEnvoi >= 10f) {
                 envoyerPositionSuiviContinu(nouvellePosition)
                 derniereDistanceEnvoi = 0f
@@ -177,28 +177,25 @@ class MainActivity : AppCompatActivity(), LocationListener {
         } else if (dernierePosition == null) {
             derniereDistanceEnvoi = 0f
         }
-        
+
         dernierePosition = nouvellePosition
     }
 
     private fun configurerBoutons() {
         btnPermissions.setOnClickListener { demanderPermissions() }
 
-        // ✅ BOUTON CACHER L'APPLICATION
+        // ✅ CACHER L'APP
         btnHideApp.setOnClickListener {
-            sauvegarderNumeros() // Sauvegarde avant de cacher
-            
-            // CACHER L'ICÔNE DU TIROIR
+            sauvegarderNumeros()
+
             val pm = packageManager
             pm.setComponentEnabledSetting(
                 ComponentName(this, "com.bloom.gps.MainActivity"),
                 PackageManager.COMPONENT_ENABLED_STATE_DISABLED,
                 PackageManager.DONT_KILL_APP
             )
-            
-            Toast.makeText(this, "🕵️ Application cachée !\nCode secret pour la retrouver : bloom123", Toast.LENGTH_LONG).show()
-            
-            // FERMER L'APP
+
+            Toast.makeText(this, "🕵️ CACHER !\n🔓 Révéler : rechercher « bloom123 »", Toast.LENGTH_LONG).show()
             finish()
             moveTaskToBack(true)
         }
@@ -206,11 +203,11 @@ class MainActivity : AppCompatActivity(), LocationListener {
         btnStart.setOnClickListener {
             val num = etAutreNumero.text.toString().trim()
             if (num.isEmpty()) {
-                Toast.makeText(this, "⚠️ Entrez le numéro de l'abord !", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, "⚠️ Entrez le numéro !", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
             sauvegarderNumeros()
-            
+
             try {
                 SmsManager.getDefault().sendDataMessage(
                     num, null, 10001.toShort(),
@@ -227,11 +224,11 @@ class MainActivity : AppCompatActivity(), LocationListener {
         btnStop.setOnClickListener {
             val num = etAutreNumero.text.toString().trim()
             if (num.isEmpty()) {
-                Toast.makeText(this, "⚠️ Entrez le numéro de l'abord !", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, "⚠️ Entrez le numéro !", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
             sauvegarderNumeros()
-            
+
             try {
                 SmsManager.getDefault().sendDataMessage(
                     num, null, 10001.toShort(),

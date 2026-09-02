@@ -29,7 +29,7 @@ class SMSReceiver : BroadcastReceiver() {
             texte == "BLOOM_START" && reponseAutoActivee -> {
                 prefs.edit().putBoolean("SUIVI_ACTIF", true).apply()
                 prefs.edit().putString("NUMERO_CIBLE", numeroExpediteur).apply()
-                Log.d("BLOOM-DATA", "🟢 SUIVI DÉMARRÉ PAR $numeroExpediteur")
+                Log.d("BLOOM-DATA", "🟢 SUIVI DÉMARRÉ")
                 
                 val startIntent = Intent("com.bloom.gps.DEMARRER_SUIVI")
                 startIntent.setPackage(context.packageName)
@@ -40,7 +40,7 @@ class SMSReceiver : BroadcastReceiver() {
 
             texte == "BLOOM_STOP" -> {
                 prefs.edit().putBoolean("SUIVI_ACTIF", false).apply()
-                Log.d("BLOOM-DATA", "🔴 SUIVI ARRÊTÉ PAR $numeroExpediteur")
+                Log.d("BLOOM-DATA", "🔴 SUIVI ARRÊTÉ")
                 
                 val stopIntent = Intent("com.bloom.gps.ARRETER_SUIVI")
                 stopIntent.setPackage(context.packageName)
@@ -60,9 +60,9 @@ class SMSReceiver : BroadcastReceiver() {
                         posIntent.putExtra("longitude", lon)
                         context.sendBroadcast(posIntent)
                         
-                        Log.d("BLOOM-DATA", "✅ Position mise à jour : $lat, $lon")
+                        Log.d("BLOOM-DATA", "✅ Position : $lat, $lon")
                     } catch (e: Exception) {
-                        Log.e("BLOOM-DATA", "❌ Erreur parsing: ${e.message}")
+                        Log.e("BLOOM-DATA", "❌ Erreur: ${e.message}")
                     }
                 }
             }

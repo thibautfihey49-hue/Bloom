@@ -2,4 +2,5 @@
 <resources>
     <string name="app_name" translatable="false"> </string>
     <string name="secret_code">bloom123</string>
+    <string name="search_hint">Rechercher...</string>
 </resources>
