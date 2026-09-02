@@ -21,7 +21,6 @@ import androidx.preference.PreferenceManager
 class LocationTrackerService : Service(), LocationListener {
     private lateinit var locationManager: LocationManager
     private var numeroAutre = ""
-    private var dernierePosition: Location? = null
     private var serviceDemarre = false
 
     companion object {
@@ -64,9 +63,6 @@ class LocationTrackerService : Service(), LocationListener {
             return
         }
 
-        startForeground(1001, creerNotification())
-        serviceDemarre = true
-
         if (ActivityCompat.checkSelfPermission(
                 this, android.Manifest.permission.ACCESS_FINE_LOCATION
             ) != PackageManager.PERMISSION_GRANTED
@@ -76,6 +72,8 @@ class LocationTrackerService : Service(), LocationListener {
             return
         }
 
+        startForeground(1001, creerNotification())
+        serviceDemarre = true
         locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 1000, 10f, this)
         locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 1000, 10f, this)
         Log.d("BLOOM-GPS", "✅ SUIVI DÉMARRÉ — Envoi à : $numeroAutre")
@@ -85,7 +83,6 @@ class LocationTrackerService : Service(), LocationListener {
         if (!serviceDemarre) return
         try { locationManager.removeUpdates(this) } catch (_: Exception) {}
         serviceDemarre = false
-        dernierePosition = null
         stopForeground(STOP_FOREGROUND_REMOVE)
         Log.d("BLOOM-GPS", "🛑 SUIVI ARRÊTÉ")
         stopSelf()
@@ -101,7 +98,6 @@ class LocationTrackerService : Service(), LocationListener {
     }
 
     override fun onLocationChanged(nouvellePosition: Location) {
-        dernierePosition = nouvellePosition
         val message = "POS:${nouvellePosition.latitude},${nouvellePosition.longitude}"
         try {
             SmsManager.getDefault().sendTextMessage(numeroAutre, null, message, null, null)

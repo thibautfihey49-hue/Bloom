@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="ic_launcher_background">#6366F1</color>
+    <color name="ic_launcher_foreground">#FFFFFF</color>
+    <color name="purple_500">#6366F1</color>
+    <color name="green_500">#10B981</color>
+    <color name="red_500">#EF4444</color>
+    <color name="amber_500">#F59E0B</color>
+    <color name="gray_100">#F5F7FA</color>
+    <color name="gray_200">#E5E7EB</color>
+    <color name="gray_700">#374151</color>
+</resources>
