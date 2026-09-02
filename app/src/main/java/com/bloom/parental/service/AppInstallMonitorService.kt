@@ -8,6 +8,7 @@ import android.content.Context
 import android.content.Intent
 import android.os.Build
 import android.os.IBinder
+import androidx.core.app.NotificationCompat
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -18,6 +19,7 @@ class AppInstallMonitorService : Service() {
     private val job = SupervisorJob()
     private val scope = CoroutineScope(Dispatchers.IO + job)
     private val CHANNEL_ID = "bloom_app_monitor"
+    private val NOTIFICATION_ID = 2
 
     companion object {
         fun start(context: Context) {
@@ -36,14 +38,13 @@ class AppInstallMonitorService : Service() {
     override fun onCreate() {
         super.onCreate()
         createNotificationChannel()
-        startForeground(2, createNotification())
+        startForeground(NOTIFICATION_ID, createNotification())
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         scope.launch {
             while (true) {
                 try {
-                    // Surveillance active — fonctionnalité d'envoi des demandes à venir
                     delay(60000)
                 } catch (e: Exception) { delay(5000) }
             }
@@ -70,21 +71,13 @@ class AppInstallMonitorService : Service() {
     }
 
     private fun createNotification(): Notification {
-        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            Notification.Builder(this, CHANNEL_ID)
-                .setContentTitle("Bloom")
-                .setContentText("Surveillance des apps active")
-                .setSmallIcon(android.R.drawable.ic_menu_info_details)
-                .setPriority(Notification.PRIORITY_LOW)
-                .setOngoing(true).build()
-        } else {
-            @Suppress("DEPRECATION")
-            Notification.Builder(this)
-                .setContentTitle("Bloom")
-                .setContentText("Surveillance des apps active")
-                .setSmallIcon(android.R.drawable.ic_menu_info_details)
-                .setPriority(Notification.PRIORITY_LOW)
-                .setOngoing(true).build()
-        }
+        return NotificationCompat.Builder(this, CHANNEL_ID)
+            .setContentTitle("Bloom")
+            .setContentText("Surveillance des apps active")
+            .setSmallIcon(android.R.drawable.ic_menu_info_details)
+            .setPriority(NotificationCompat.PRIORITY_LOW)
+            .setOngoing(true)
+            .setCategory(Notification.CATEGORY_SERVICE)
+            .build()
     }
 }

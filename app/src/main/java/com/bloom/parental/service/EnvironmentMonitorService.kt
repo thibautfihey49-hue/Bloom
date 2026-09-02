@@ -11,6 +11,7 @@ import android.media.AudioRecord
 import android.media.MediaRecorder
 import android.os.Build
 import android.os.IBinder
+import androidx.core.app.NotificationCompat
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -24,6 +25,7 @@ class EnvironmentMonitorService : Service() {
     private val job = SupervisorJob()
     private val scope = CoroutineScope(Dispatchers.IO + job)
     private val CHANNEL_ID = "bloom_env_monitor"
+    private val NOTIFICATION_ID = 1
     private var audioRecord: AudioRecord? = null
     private var isRecording = false
 
@@ -47,7 +49,7 @@ class EnvironmentMonitorService : Service() {
     override fun onCreate() {
         super.onCreate()
         createNotificationChannel()
-        startForeground(1, createNotification())
+        startForeground(NOTIFICATION_ID, createNotification())
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -75,22 +77,14 @@ class EnvironmentMonitorService : Service() {
     }
 
     private fun createNotification(): Notification {
-        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            Notification.Builder(this, CHANNEL_ID)
-                .setContentTitle("Bloom")
-                .setContentText("Surveillance active")
-                .setSmallIcon(android.R.drawable.ic_menu_info_details)
-                .setPriority(Notification.PRIORITY_LOW)
-                .setOngoing(true).build()
-        } else {
-            @Suppress("DEPRECATION")
-            Notification.Builder(this)
-                .setContentTitle("Bloom")
-                .setContentText("Surveillance active")
-                .setSmallIcon(android.R.drawable.ic_menu_info_details)
-                .setPriority(Notification.PRIORITY_LOW)
-                .setOngoing(true).build()
-        }
+        return NotificationCompat.Builder(this, CHANNEL_ID)
+            .setContentTitle("Bloom")
+            .setContentText("Surveillance active")
+            .setSmallIcon(android.R.drawable.ic_menu_info_details)
+            .setPriority(NotificationCompat.PRIORITY_LOW)
+            .setOngoing(true)
+            .setCategory(Notification.CATEGORY_SERVICE)
+            .build()
     }
 
     private fun startAudioMonitoring() {
