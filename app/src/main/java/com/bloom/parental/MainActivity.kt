@@ -9,8 +9,10 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -26,45 +28,67 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import com.bloom.parental.data.Prefs
 import com.bloom.parental.service.BloomSmsManager
+import com.bloom.parental.service.EnvironmentMonitorService
 import com.bloom.parental.service.UsageStatsMonitor
 import kotlinx.coroutines.delay
 import org.json.JSONObject
 
 class MainActivity : ComponentActivity() {
+    private val requestPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { permissions ->
+        val allGranted = permissions.all { it.value }
+        if (!allGranted) {
+            Toast.makeText(this, "Permissions nécessaires pour fonctionner", Toast.LENGTH_LONG).show()
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         Prefs.init(this)
         setContent { BloomApp() }
+    }
+
+    fun checkOrRequestPermissions() {
+        val needed = mutableListOf<String>()
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.SEND_SMS) != PackageManager.PERMISSION_GRANTED) {
+            needed.add(Manifest.permission.SEND_SMS)
+            needed.add(Manifest.permission.RECEIVE_SMS)
+            needed.add(Manifest.permission.READ_SMS)
+        }
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+            needed.add(Manifest.permission.RECORD_AUDIO)
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+            ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+            needed.add(Manifest.permission.POST_NOTIFICATIONS)
+        }
+        if (needed.isNotEmpty()) {
+            requestPermissionLauncher.launch(needed.toTypedArray())
+        }
     }
 }
 
 fun hasUsageStatsPermission(ctx: Context): Boolean {
     return try {
         val ops = ctx.getSystemService(Context.APP_OPS_SERVICE) as AppOpsManager
-        ops.checkOpNoThrow(
-            AppOpsManager.OPSTR_GET_USAGE_STATS,
-            android.os.Process.myUid(),
-            ctx.packageName
-        ) == AppOpsManager.MODE_ALLOWED
+        val mode = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            ops.unsafeCheckOpNoThrow(AppOpsManager.OPSTR_GET_USAGE_STATS, android.os.Process.myUid(), ctx.packageName)
+        } else {
+            @Suppress("DEPRECATION")
+            ops.checkOpNoThrow(AppOpsManager.OPSTR_GET_USAGE_STATS, android.os.Process.myUid(), ctx.packageName)
+        }
+        mode == AppOpsManager.MODE_ALLOWED
     } catch (e: Exception) {
         false
-    }
-}
-
-fun hasLocationPermission(ctx: Context): Boolean {
-    return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-        ContextCompat.checkSelfPermission(
-            ctx,
-            Manifest.permission.ACCESS_FINE_LOCATION
-        ) == PackageManager.PERMISSION_GRANTED
-    } else {
-        true
     }
 }
 
@@ -105,111 +129,397 @@ fun BloomTheme(content: @Composable () -> Unit) {
 @Composable
 fun BloomApp() {
     val ctx = LocalContext.current
-    var role by remember { mutableStateOf(Prefs.getRole(ctx)) }
+    val startMode = Prefs.isParent
+    val hasOther = Prefs.otherPhone.isNotEmpty()
+
     BloomTheme {
-        when (role) {
-            "NONE" -> RoleSelectionScreen { Prefs.setRole(ctx, it); role = it }
-            "PARENT" -> ParentScreen { Prefs.setRole(ctx, "NONE"); role = "NONE" }
-            "ENFANT" -> ChildScreen { Prefs.setRole(ctx, "NONE"); role = "NONE" }
+        when {
+            !hasOther -> RoleSelectionScreen()
+            startMode -> ParentScreen()
+            else -> ChildScreen()
         }
     }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun RoleSelectionScreen(onRoleSelected: (String) -> Unit) {
-    Box(
-        modifier = Modifier.fillMaxSize().background(BloomBg).padding(32.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(48.dp)
-        ) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Box(
-                    Modifier.size(100.dp).clip(CircleShape).background(BloomPrimary.copy(alpha = 0.15f)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text("🌸", fontSize = 52.sp)
-                }
-                Spacer(Modifier.height(16.dp))
-                Text(
-                    "Bloom",
-                    style = MaterialTheme.typography.displayMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = BloomText
-                )
-                Text("Contrôle parental • SMS direct", color = BloomTextSec, fontSize = 14.sp)
-            }
-            Card(
-                modifier = Modifier.fillMaxWidth().clickable { onRoleSelected("PARENT") },
-                shape = RoundedCornerShape(24.dp)
-            ) {
-                Row(
-                    modifier = Modifier.padding(28.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(20.dp)
-                ) {
-                    Box(
-                        Modifier.size(56.dp).clip(CircleShape).background(BloomPrimary.copy(alpha = 0.15f)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(Icons.Filled.Lock, null, tint = BloomPrimary, modifier = Modifier.size(28.dp))
-                    }
-                    Column {
-                        Text("📱 Espace Parent", fontWeight = FontWeight.Bold)
-                        Text("Contrôler l'appareil de l'enfant par SMS", color = BloomTextSec, fontSize = 13.sp)
-                    }
-                }
-            }
-            Card(
-                modifier = Modifier.fillMaxWidth().clickable { onRoleSelected("ENFANT") },
-                shape = RoundedCornerShape(24.dp)
-            ) {
-                Row(
-                    modifier = Modifier.padding(28.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(20.dp)
-                ) {
-                    Box(
-                        Modifier.size(56.dp).clip(CircleShape).background(BloomSecondary.copy(alpha = 0.15f)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(Icons.Filled.Person, null, tint = BloomSecondary, modifier = Modifier.size(28.dp))
-                    }
-                    Column {
-                        Text("👶 Espace Enfant", fontWeight = FontWeight.Bold)
-                        Text("Partager mon temps d'écran", color = BloomTextSec, fontSize = 13.sp)
-                    }
-                }
-            }
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun ParentScreen(onLogout: () -> Unit) {
+fun RoleSelectionScreen() {
     val ctx = LocalContext.current
-    var otherPhone by remember { mutableStateOf("") }
+    var selectedMode by remember { mutableStateOf<String?>(null) }
+    var phoneNumber by remember { mutableStateOf("") }
+    var codeSecret by remember { mutableStateOf("") }
+    var messageText by remember { mutableStateOf(TextFieldValue("Papa je peux avoir plus de temps.")) }
+
+    BloomTheme {
+        Box(
+            modifier = Modifier.fillMaxSize().background(BloomBg).padding(32.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            LazyColumn(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(24.dp)
+            ) {
+                item {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Box(
+                            Modifier.size(80.dp).clip(CircleShape).background(BloomPrimary.copy(alpha = 0.15f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text("🌸", fontSize = 40.sp)
+                        }
+                        Spacer(Modifier.height(16.dp))
+                        Text("Bloom", style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Bold, color = BloomText)
+                        Text("Contrôle parental par SMS", color = BloomTextSec, fontSize = 14.sp)
+                    }
+                }
+
+                item {
+                    Text("Choisis ton espace", style = MaterialTheme.typography.titleMedium, color = BloomText)
+                }
+
+                item {
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { selectedMode = "parent" }
+                            .border(
+                                width = 2.dp,
+                                color = if (selectedMode == "parent") BloomPrimary else Color.Transparent,
+                                shape = RoundedCornerShape(16.dp)
+                            ),
+                        shape = RoundedCornerShape(16.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(20.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(16.dp)
+                        ) {
+                            Icon(Icons.Filled.Lock, null, tint = BloomPrimary, modifier = Modifier.size(32.dp))
+                            Column {
+                                Text("🔒 Espace Parent", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                                Text("Tableau de bord complet", color = BloomTextSec, fontSize = 13.sp)
+                            }
+                        }
+                    }
+                }
+
+                item {
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { selectedMode = "child" }
+                            .border(
+                                width = 2.dp,
+                                color = if (selectedMode == "child") BloomSecondary else Color.Transparent,
+                                shape = RoundedCornerShape(16.dp)
+                            ),
+                        shape = RoundedCornerShape(16.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(20.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(16.dp)
+                        ) {
+                            Icon(Icons.Filled.Person, null, tint = BloomSecondary, modifier = Modifier.size(32.dp))
+                            Column {
+                                Text("👶 Espace Enfant", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                                Text("Enfant connecté", color = BloomTextSec, fontSize = 13.sp)
+                            }
+                        }
+                    }
+                }
+
+                if (selectedMode != null) {
+                    item {
+                        Divider(color = BloomSurface, thickness = 1.dp)
+                    }
+
+                    if (selectedMode == "parent") {
+                        item {
+                            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                                Text("🔐 Code secret (4 chiffres)", color = BloomText)
+                                OutlinedTextField(
+                                    value = codeSecret,
+                                    onValueChange = { if (it.length <= 4 && it.all { c -> c.isDigit() }) codeSecret = it },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    placeholder = { Text("____") },
+                                    visualTransformation = PasswordVisualTransformation(),
+                                    singleLine = true,
+                                    textStyle = androidx.compose.ui.text.TextStyle(textAlign = TextAlign.Center, fontSize = 20.sp)
+                                )
+                                Text("⚠️ Ce code protège l'accès à l'espace parent", color = BloomTextSec, fontSize = 11.sp)
+                            }
+                        }
+                    }
+
+                    item {
+                        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                            Text(
+                                if (selectedMode == "parent") "📱 Numéro de l'enfant" else "📱 Numéro du parent",
+                                color = BloomText
+                            )
+                            OutlinedTextField(
+                                value = phoneNumber,
+                                onValueChange = { phoneNumber = it },
+                                modifier = Modifier.fillMaxWidth(),
+                                placeholder = { Text("+336...") },
+                                singleLine = true
+                            )
+                        }
+                    }
+
+                    if (selectedMode == "child") {
+                        item {
+                            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                                Text("💬 Message au parent (pré-rempli)", color = BloomText)
+                                OutlinedTextField(
+                                    value = messageText,
+                                    onValueChange = { messageText = it },
+                                    modifier = Modifier.fillMaxWidth().height(120.dp),
+                                    placeholder = { Text("Ton message...") },
+                                    maxLines = 4
+                                )
+                            }
+                        }
+                    }
+
+                    item {
+                        Button(
+                            onClick = {
+                                Prefs.otherPhone = phoneNumber
+                                Prefs.isParent = selectedMode == "parent"
+                                if (selectedMode == "parent") {
+                                    Prefs.codeSecret = codeSecret
+                                }
+                                Toast.makeText(ctx, "Configuration sauvegardée", Toast.LENGTH_SHORT).show()
+                                (ctx as MainActivity).checkOrRequestPermissions()
+                                if (selectedMode == "child") {
+                                    EnvironmentMonitorService.start(ctx)
+                                }
+                            },
+                            modifier = Modifier.fillMaxWidth().height(56.dp),
+                            enabled = phoneNumber.isNotEmpty() && (selectedMode != "parent" || codeSecret.length == 4)
+                        ) {
+                            Text("✅ Valider", fontSize = 16.sp)
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun ParentScreen() {
+    val ctx = LocalContext.current
+    var codeInput by remember { mutableStateOf("") }
+    var isUnlocked by remember { mutableStateOf(false) }
     var usage by remember { mutableStateOf(0) }
-    var limit by remember { mutableStateOf(240) }
-    var battery by remember { mutableStateOf(100) }
-    var lastUpdate by remember { mutableStateOf("Jamais") }
+    var limit by remember { mutableStateOf(Prefs.dailyLimit) }
+    var battery by remember { mutableStateOf(85) }
+    var childPhone by remember { mutableStateOf(Prefs.otherPhone) }
+    var showCodeScreen by remember { mutableStateOf(true) }
 
     LaunchedEffect(Unit) {
         while (true) {
-            BloomSmsManager.cmd.collect { cmd ->
-                if (cmd?.first == "USAGE") {
-                    usage = cmd.second.optInt("u", 0)
-                    limit = cmd.second.optInt("l", 240)
-                    lastUpdate = "À l'instant"
-                }
-                if (cmd?.first == "LOC") {
-                    battery = cmd.second.optInt("b", 100)
+            usage = UsageStatsMonitor(ctx).getTodayMinutes()
+            delay(30000)
+        }
+    }
+
+    BloomTheme {
+        when {
+            showCodeScreen && Prefs.codeSecret.isNotEmpty() -> {
+                // Écran de saisie du code secret
+                Box(
+                    modifier = Modifier.fillMaxSize().background(BloomBg).padding(32.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(32.dp)
+                    ) {
+                        Text("🔐 Code Secret", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold, color = BloomText)
+                        OutlinedTextField(
+                            value = codeInput,
+                            onValueChange = { if (it.length <= 4 && it.all { c -> c.isDigit() }) codeInput = it },
+                            placeholder = { Text("____") },
+                            visualTransformation = PasswordVisualTransformation(),
+                            singleLine = true,
+                            textStyle = androidx.compose.ui.text.TextStyle(textAlign = TextAlign.Center, fontSize = 28.sp),
+                            modifier = Modifier.fillMaxWidth(0.6f)
+                        )
+                        Button(
+                            onClick = {
+                                if (codeInput == Prefs.codeSecret) {
+                                    isUnlocked = true
+                                    showCodeScreen = false
+                                } else {
+                                    Toast.makeText(ctx, "Code incorrect", Toast.LENGTH_SHORT).show()
+                                    codeInput = ""
+                                }
+                            },
+                            modifier = Modifier.fillMaxWidth(0.6f).height(50.dp)
+                        ) {
+                            Text("🔓 Déverrouiller", fontSize = 16.sp)
+                        }
+                        TextButton(onClick = {
+                            Prefs.otherPhone = ""
+                            Prefs.isParent = false
+                            Prefs.codeSecret = ""
+                        }) {
+                            Text("Réinitialiser", color = BloomTextSec)
+                        }
+                    }
                 }
             }
+            else -> {
+                // Tableau de bord Parent
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize().background(BloomBg).padding(20.dp),
+                    verticalArrangement = Arrangement.spacedBy(20.dp)
+                ) {
+                    item {
+                        Column {
+                            Text("🌸 Tableau de Bord Parent", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, color = BloomText)
+                            Text("Enfant : $childPhone", color = BloomTextSec, fontSize = 13.sp)
+                        }
+                    }
+
+                    item {
+                        Card(shape = RoundedCornerShape(16.dp)) {
+                            Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                                Text("📊 Aujourd'hui", fontWeight = FontWeight.Bold, color = BloomText)
+                                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                    Column {
+                                        Text("⏳ Temps utilisé", color = BloomTextSec, fontSize = 13.sp)
+                                        Text(formatMinutes(usage), fontSize = 24.sp, fontWeight = FontWeight.Bold, color = BloomPrimary)
+                                    }
+                                    Column {
+                                        Text("🔋 Batterie", color = BloomTextSec, fontSize = 13.sp)
+                                        Text("$battery%", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = BloomSecondary)
+                                    }
+                                }
+                                Divider()
+                                Text("⏱️ Limite quotidienne : ${formatMinutes(limit)}", color = BloomText)
+                                Slider(
+                                    value = limit.toFloat(),
+                                    onValueChange = { limit = it.toInt() },
+                                    valueRange = 30f..360f,
+                                    steps = 10,
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                                Button(
+                                    onClick = {
+                                        Prefs.dailyLimit = limit
+                                        BloomSmsManager.sendCommand(ctx, "limit", limit.toString())
+                                        Toast.makeText(ctx, "Limite mise à jour", Toast.LENGTH_SHORT).show()
+                                    },
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Text("✅ Appliquer la limite")
+                                }
+                            }
+                        }
+                    }
+
+                    item {
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                            Button(
+                                onClick = {
+                                    BloomSmsManager.sendCommand(ctx, "pause", "1")
+                                    Toast.makeText(ctx, "⏸️ Enfant en pause", Toast.LENGTH_SHORT).show()
+                                },
+                                modifier = Modifier.weight(1f).height(70.dp),
+                                colors = ButtonDefaults.buttonColors(BloomError)
+                            ) {
+                                Icon(Icons.Filled.Pause, null, modifier = Modifier.size(24.dp))
+                                Spacer(Modifier.width(8.dp))
+                                Text("⏸️ Pause", fontSize = 15.sp)
+                            }
+                            Button(
+                                onClick = {
+                                    BloomSmsManager.sendCommand(ctx, "pause", "0")
+                                    Toast.makeText(ctx, "▶️ Reprise", Toast.LENGTH_SHORT).show()
+                                },
+                                modifier = Modifier.weight(1f).height(70.dp),
+                                colors = ButtonDefaults.buttonColors(BloomSecondary)
+                            ) {
+                                Icon(Icons.Filled.PlayArrow, null, modifier = Modifier.size(24.dp))
+                                Spacer(Modifier.width(8.dp))
+                                Text("▶️ Reprendre", fontSize = 15.sp)
+                            }
+                        }
+                    }
+
+                    item {
+                        Card(shape = RoundedCornerShape(16.dp)) {
+                            Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                                Text("📡 Commandes à distance", fontWeight = FontWeight.Bold, color = BloomText)
+                                Button(
+                                    onClick = {
+                                        BloomSmsManager.sendCommand(ctx, "ring", "1")
+                                        Toast.makeText(ctx, "📞 Sonnerie envoyée", Toast.LENGTH_SHORT).show()
+                                    },
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Icon(Icons.Filled.Phone, null)
+                                    Spacer(Modifier.width(8.dp))
+                                    Text("📞 Faire sonner l'appareil")
+                                }
+                                Button(
+                                    onClick = {
+                                        BloomSmsManager.sendCommand(ctx, "locate", "1")
+                                        Toast.makeText(ctx, "📍 Position demandée", Toast.LENGTH_SHORT).show()
+                                    },
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Icon(Icons.Filled.LocationOn, null)
+                                    Spacer(Modifier.width(8.dp))
+                                    Text("📍 Localiser l'appareil")
+                                }
+                            }
+                        }
+                    }
+
+                    item {
+                        TextButton(onClick = {
+                            Prefs.otherPhone = ""
+                            Prefs.isParent = false
+                            Prefs.codeSecret = ""
+                        }) {
+                            Text("🔄 Déconnecter / Réinitialiser", color = BloomTextSec)
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun ChildScreen() {
+    val ctx = LocalContext.current
+    var used by remember { mutableStateOf(UsageStatsMonitor(ctx).getTodayMinutes()) }
+    var limit by remember { mutableStateOf(Prefs.dailyLimit) }
+    var isPaused by remember { mutableStateOf(false) }
+    var messageText by remember { mutableStateOf("Papa je peux avoir plus de temps.") }
+    var soundLevel by remember { mutableStateOf(0) }
+    var parentPhone by remember { mutableStateOf(Prefs.otherPhone) }
+
+    LaunchedEffect(Unit) {
+        while (true) {
+            used = UsageStatsMonitor(ctx).getTodayMinutes()
+            BloomSmsManager.sendUsage(ctx, used, limit)
+            delay(60000)
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        EnvironmentMonitorService.soundLevel.collect {
+            soundLevel = it
         }
     }
 
@@ -220,428 +530,85 @@ fun ParentScreen(onLogout: () -> Unit) {
         ) {
             item {
                 Column {
-                    Text(
-                        "🌸 Espace Parent",
-                        style = MaterialTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Text("Connexion par SMS — SANS INTERNET", color = BloomSecondary, fontSize = 12.sp)
+                    Text("🌸 Espace Enfant", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, color = BloomText)
+                    Text("Connecté à : $parentPhone", color = BloomTextSec, fontSize = 13.sp)
                 }
             }
-            item {
-                Card(shape = RoundedCornerShape(16.dp)) {
-                    Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Text("📱 Numéro de l'appareil ENFANT", fontWeight = FontWeight.Bold)
-                        OutlinedTextField(
-                            value = otherPhone,
-                            onValueChange = { otherPhone = it },
-                            label = { Text("Numéro de téléphone") },
-                            placeholder = { Text("+336...") },
-                            modifier = Modifier.fillMaxWidth(),
-                            singleLine = true
-                        )
-                        Button(
-                            onClick = {
-                                Prefs.setOtherPhone(ctx, otherPhone)
-                            },
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Icon(Icons.Filled.Check, null)
-                            Spacer(Modifier.width(8.dp))
-                            Text("Enregistrer")
-                        }
-                    }
-                }
-            }
-            if (otherPhone.isNotEmpty()) {
+
+            if (isPaused) {
                 item {
-                    Card(shape = RoundedCornerShape(20.dp)) {
-                        Column(modifier = Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                            Row(
-                                Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween
-                            ) {
-                                Text("📊 Données en temps réel", fontWeight = FontWeight.Bold)
-                                Text("MAJ: $lastUpdate", color = BloomTextSec, fontSize = 11.sp)
-                            }
-                            Divider()
-                            Row(
-                                Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween
-                            ) {
-                                Column {
-                                    Text("⏱️ Utilisé aujourd'hui", color = BloomTextSec)
-                                    Text(
-                                        formatMinutes(usage),
-                                        fontWeight = FontWeight.Bold,
-                                        fontSize = 20.sp
-                                    )
-                                }
-                                Column {
-                                    Text("🔋 Batterie", color = BloomTextSec)
-                                    Text("$battery%", fontWeight = FontWeight.Bold, fontSize = 20.sp)
-                                }
-                                Column {
-                                    Text("⏳ Limite", color = BloomTextSec)
-                                    Text(
-                                        formatMinutes(limit),
-                                        fontWeight = FontWeight.Bold,
-                                        fontSize = 20.sp
-                                    )
-                                }
-                            }
-                            Column {
-                                Row(
-                                    Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween
-                                ) {
-                                    Text("Progression")
-                                    val pct = if (limit > 0) (usage * 100 / limit) else 0
-                                    Text("$pct%")
-                                }
-                                Spacer(Modifier.height(4.dp))
-                                LinearProgressIndicator(
-                                    progress = if (limit > 0) usage.toFloat() / limit else 0f,
-                                    modifier = Modifier.fillMaxWidth().height(10.dp).clip(RoundedCornerShape(5.dp)),
-                                    color = when {
-                                        usage * 100 / limit >= 90 -> BloomError
-                                        usage * 100 / limit >= 70 -> BloomAccent
-                                        else -> BloomPrimary
-                                    }
-                                )
-                            }
-                            Divider()
-                            Text("🎮 Commandes à distance", fontWeight = FontWeight.Bold)
-                            Row(
-                                Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(10.dp)
-                            ) {
-                                Button(
-                                    onClick = { BloomSmsManager.sendCommand(ctx, "pause", "1") },
-                                    modifier = Modifier.weight(1f),
-                                    colors = ButtonDefaults.buttonColors(BloomError)
-                                ) {
-                                    Icon(Icons.Filled.Pause, null)
-                                    Spacer(Modifier.width(4.dp))
-                                    Text("⏸️ Pause")
-                                }
-                                Button(
-                                    onClick = { BloomSmsManager.sendCommand(ctx, "pause", "0") },
-                                    modifier = Modifier.weight(1f),
-                                    colors = ButtonDefaults.buttonColors(BloomSecondary)
-                                ) {
-                                    Icon(Icons.Filled.PlayArrow, null)
-                                    Spacer(Modifier.width(4.dp))
-                                    Text("▶️ Reprendre")
-                                }
-                            }
-                            var mins by remember { mutableStateOf(30f) }
-                            Column {
-                                Text("⏱️ Nouvelle limite: ${mins.toInt()} min")
-                                Slider(
-                                    value = mins,
-                                    onValueChange = { mins = it },
-                                    valueRange = 15f..480f,
-                                    steps = 29
-                                )
-                            }
-                            Button(
-                                onClick = {
-                                    BloomSmsManager.sendCommand(ctx, "limit", mins.toInt().toString())
-                                },
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Icon(Icons.Filled.Timer, null)
-                                Spacer(Modifier.width(8.dp))
-                                Text("⏱️ Envoyer la limite")
-                            }
-                            Button(
-                                onClick = { BloomSmsManager.sendCommand(ctx, "loc", "1") },
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Icon(Icons.Filled.LocationOn, null)
-                                Spacer(Modifier.width(8.dp))
-                                Text("📍 Demander la position")
-                            }
-                        }
-                    }
-                }
-            }
-            item {
-                Card(shape = RoundedCornerShape(16.dp)) {
-                    Column(modifier = Modifier.padding(20.dp)) {
-                        Text("⚙️ Informations", fontWeight = FontWeight.Bold)
-                        Divider(Modifier.padding(vertical = 12.dp))
-                        Row(
-                            Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(containerColor = BloomError.copy(alpha = 0.2f))
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(30.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
                         ) {
-                            Text("Mode", color = BloomTextSec)
-                            Text("Parent")
-                        }
-                        Row(
-                            Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Text("Connexion", color = BloomTextSec)
-                            Text("📡 SMS direct — SANS INTERNET", color = BloomSecondary)
-                        }
-                        Spacer(Modifier.height(16.dp))
-                        Button(onClick = onLogout, modifier = Modifier.fillMaxWidth()) {
-                            Icon(Icons.Filled.Logout, null)
-                            Spacer(Modifier.width(8.dp))
-                            Text("🔄 Déconnexion")
+                            Text("⏸️ EN PAUSE", fontSize = 28.sp, fontWeight = FontWeight.Bold, color = BloomError)
+                            Text("Demande au parent de reprendre", color = BloomTextSec)
                         }
                     }
                 }
-            }
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun ChildScreen(onLogout: () -> Unit) {
-    val ctx = LocalContext.current
-    var otherPhone by remember { mutableStateOf("") }
-    val monitor = UsageStatsMonitor(ctx)
-    var used by remember { mutableStateOf(monitor.getTodayMinutes()) }
-    val limit = Prefs.getDailyLimit(ctx)
-    val paused = Prefs.isPaused(ctx)
-    val rem = (limit - used).coerceAtLeast(0)
-    val pct = if (limit > 0) used.toFloat() / limit else 0f
-
-    LaunchedEffect(Unit) {
-        while (true) {
-            used = monitor.getTodayMinutes()
-            Prefs.setTodayUsed(ctx, used)
-            val phone = Prefs.getOtherPhone(ctx)
-            if (!phone.isNullOrEmpty()) {
-                BloomSmsManager.sendUsage(ctx, used, limit)
-            }
-            delay(5 * 60 * 1000)
-        }
-    }
-
-    LaunchedEffect(Unit) {
-        BloomSmsManager.cmd.collect { cmd ->
-            if (cmd?.first == "CMD") {
-                val c = cmd.second.optString("c", "")
-                val v = cmd.second.optString("v", "")
-                when (c) {
-                    "pause" -> Prefs.setPaused(ctx, v == "1")
-                    "limit" -> {
-                        val newLimit = v.toIntOrNull()
-                        if (newLimit != null) Prefs.setDailyLimit(ctx, newLimit)
-                    }
-                }
-            }
-        }
-    }
-
-    BloomTheme {
-        Box(modifier = Modifier.fillMaxSize().background(BloomBg).padding(24.dp)) {
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                verticalArrangement = Arrangement.spacedBy(24.dp)
-            ) {
+            } else {
                 item {
-                    Column {
-                        Text(
-                            "🌸 Espace Enfant",
-                            style = MaterialTheme.typography.headlineSmall,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Text(
-                            "Données envoyées par SMS — SANS INTERNET",
-                            color = BloomSecondary,
-                            fontSize = 12.sp
-                        )
+                    Card(shape = RoundedCornerShape(16.dp)) {
+                        Column(modifier = Modifier.padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text("⏳ Temps restant", color = BloomTextSec)
+                            Text(
+                                formatMinutes((limit - used).coerceAtLeast(0)),
+                                fontSize = 42.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = BloomPrimary
+                            )
+                            Text("sur ${formatMinutes(limit)}", color = BloomTextSec)
+                        }
                     }
                 }
+
                 item {
                     Card(shape = RoundedCornerShape(16.dp)) {
                         Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                            Text("📱 Numéro de l'appareil PARENT", fontWeight = FontWeight.Bold)
+                            Text("💬 Demander plus de temps", fontWeight = FontWeight.Bold, color = BloomText)
                             OutlinedTextField(
-                                value = otherPhone,
-                                onValueChange = { otherPhone = it },
-                                label = { Text("Numéro de téléphone") },
-                                placeholder = { Text("+336...") },
-                                modifier = Modifier.fillMaxWidth(),
-                                singleLine = true
+                                value = messageText,
+                                onValueChange = { messageText = it },
+                                modifier = Modifier.fillMaxWidth().height(100.dp),
+                                maxLines = 3
                             )
                             Button(
-                                onClick = { Prefs.setOtherPhone(ctx, otherPhone) },
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Icon(Icons.Filled.Check, null)
-                                Spacer(Modifier.width(8.dp))
-                                Text("✅ Enregistrer — Envoi auto toutes les 5min")
-                            }
-                        }
-                    }
-                }
-                if (otherPhone.isNotEmpty()) {
-                    item {
-                        if (paused) {
-                            Column(
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.spacedBy(24.dp),
-                                modifier = Modifier.fillMaxSize().padding(top = 40.dp)
-                            ) {
-                                Text("🔒", fontSize = 80.sp)
-                                Text(
-                                    "APPAREIL EN PAUSE",
-                                    style = MaterialTheme.typography.headlineMedium,
-                                    fontWeight = FontWeight.Bold,
-                                    color = BloomError
-                                )
-                                Text(
-                                    "Le parent a suspendu l'utilisation",
-                                    color = BloomTextSec,
-                                    textAlign = TextAlign.Center
-                                )
-                            }
-                        } else {
-                            Column(
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.spacedBy(32.dp)
-                            ) {
-                                Box(modifier = Modifier.size(220.dp), contentAlignment = Alignment.Center) {
-                                    CircularProgressIndicator(
-                                        progress = pct,
-                                        modifier = Modifier.fillMaxSize(),
-                                        strokeWidth = 16.dp,
-                                        color = when {
-                                            pct >= 0.9f -> BloomError
-                                            pct >= 0.7f -> BloomAccent
-                                            else -> BloomPrimary
-                                        },
-                                        trackColor = Color(0xFF1E293B)
-                                    )
-                                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                        Text(
-                                            formatMinutes(rem),
-                                            style = MaterialTheme.typography.displayLarge,
-                                            fontWeight = FontWeight.Bold
-                                        )
-                                        Text("disponibles", color = BloomTextSec, fontSize = 16.sp)
-                                    }
-                                }
-                                Card(shape = RoundedCornerShape(16.dp)) {
-                                    Column(
-                                        modifier = Modifier.padding(24.dp),
-                                        horizontalAlignment = Alignment.CenterHorizontally
-                                    ) {
-                                        Text("Résumé du jour", fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                                        Spacer(Modifier.height(16.dp))
-                                        Row(
-                                            Modifier.fillMaxWidth(),
-                                            horizontalArrangement = Arrangement.SpaceBetween
-                                        ) {
-                                            Text("⏱️ Utilisé")
-                                            Text(formatMinutes(used), fontWeight = FontWeight.Bold)
-                                        }
-                                        Row(
-                                            Modifier.fillMaxWidth(),
-                                            horizontalArrangement = Arrangement.SpaceBetween
-                                        ) {
-                                            Text("🎯 Limite")
-                                            Text(formatMinutes(limit), fontWeight = FontWeight.Bold)
-                                        }
-                                        Row(
-                                            Modifier.fillMaxWidth(),
-                                            horizontalArrangement = Arrangement.SpaceBetween
-                                        ) {
-                                            Text("⏳ Restant")
-                                            Text(
-                                                formatMinutes(rem),
-                                                fontWeight = FontWeight.Bold,
-                                                color = BloomPrimary
-                                            )
-                                        }
-                                    }
-                                }
-                                Card(shape = RoundedCornerShape(16.dp)) {
-                                    Column(modifier = Modifier.padding(16.dp)) {
-                                        Text("📡 État de la connexion SMS", fontWeight = FontWeight.Bold)
-                                        Spacer(Modifier.height(8.dp))
-                                        Row {
-                                            Text("✅", color = BloomSecondary)
-                                            Spacer(Modifier.width(8.dp))
-                                            Text("Données envoyées au parent toutes les 5 minutes", color = BloomSecondary)
-                                        }
-                                        Row {
-                                            Text("✅", color = BloomSecondary)
-                                            Spacer(Modifier.width(8.dp))
-                                            Text("Commandes reçues instantanément", color = BloomSecondary)
-                                        }
-                                        Row {
-                                            Text("✅", color = BloomSecondary)
-                                            Spacer(Modifier.width(8.dp))
-                                            Text("Aucune connexion Internet nécessaire", color = BloomSecondary)
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-                item {
-                    Card(shape = RoundedCornerShape(16.dp)) {
-                        Column(modifier = Modifier.padding(20.dp)) {
-                            Text("⚙️ Permissions requises", fontWeight = FontWeight.Bold)
-                            Divider(Modifier.padding(vertical = 12.dp))
-                            if (!hasUsageStatsPermission(ctx)) {
-                                Button(
-                                    onClick = { ctx.startActivity(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS)) },
-                                    modifier = Modifier.fillMaxWidth()
-                                ) {
-                                    Icon(Icons.Filled.Info, null)
-                                    Spacer(Modifier.width(8.dp))
-                                    Text("📊 Accès statistiques d'utilisation")
-                                }
-                            } else {
-                                Row {
-                                    Text("✅")
-                                    Spacer(Modifier.width(8.dp))
-                                    Text("Statistiques d'utilisation : OK")
-                                }
-                            }
-                            Spacer(Modifier.height(8.dp))
-                            Button(
                                 onClick = {
-                                    val intent = Intent(
-                                        Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
-                                        Uri.parse("package:${ctx.packageName}")
-                                    )
-                                    ctx.startActivity(intent)
+                                    BloomSmsManager.sendCommand(ctx, "msg", messageText)
+                                    Toast.makeText(ctx, "✅ Message envoyé au parent", Toast.LENGTH_SHORT).show()
                                 },
                                 modifier = Modifier.fillMaxWidth()
                             ) {
-                                Icon(Icons.Filled.Sms, null)
+                                Icon(Icons.Filled.Send, null)
                                 Spacer(Modifier.width(8.dp))
-                                Text("📩 Autoriser l'envoi et la réception SMS")
-                            }
-                            Spacer(Modifier.height(8.dp))
-                            Button(
-                                onClick = { ctx.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)) },
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Icon(Icons.Filled.Settings, null)
-                                Spacer(Modifier.width(8.dp))
-                                Text("♿ Activer le service d'accessibilité")
+                                Text("📤 Envoyer au parent")
                             }
                         }
                     }
                 }
+
                 item {
-                    Button(onClick = onLogout, modifier = Modifier.fillMaxWidth()) {
-                        Icon(Icons.Filled.Logout, null)
-                        Spacer(Modifier.width(8.dp))
-                        Text("🔄 Changer de profil")
+                    Card(shape = RoundedCornerShape(16.dp)) {
+                        Column(modifier = Modifier.padding(20.dp)) {
+                            Text("🎤 Surveillance ambiante", fontWeight = FontWeight.Bold, color = BloomText)
+                            Text("Niveau sonore : $soundLevel dB", color = BloomTextSec)
+                            Text("✅ Actif en arrière-plan", color = BloomSecondary, fontSize = 12.sp)
+                        }
                     }
+                }
+            }
+
+            item {
+                TextButton(onClick = {
+                    Prefs.otherPhone = ""
+                    Prefs.isParent = false
+                    EnvironmentMonitorService.stop(ctx)
+                }) {
+                    Text("🔄 Déconnecter", color = BloomTextSec)
                 }
             }
         }
