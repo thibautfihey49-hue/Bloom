@@ -43,7 +43,7 @@ class AppInstallMonitorService : Service() {
         scope.launch {
             while (true) {
                 try {
-                    BloomSmsManager.sendPendingApps(this@AppInstallMonitorService)
+                    // Surveillance active — fonctionnalité d'envoi des demandes à venir
                     delay(60000)
                 } catch (e: Exception) { delay(5000) }
             }
