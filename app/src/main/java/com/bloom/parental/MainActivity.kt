@@ -434,8 +434,9 @@ fun ChildScreen() {
                             val remaining = (dailyLimit - todayUsed).coerceAtLeast(0)
                             Text(formatMinutes(remaining), fontSize = 48.sp, fontWeight = FontWeight.Bold, color = if (remaining < 30) BloomError else BloomPrimary)
                             Text("sur ${formatMinutes(dailyLimit)} autorisés", color = BloomTextSec)
+                            val progressValue = (todayUsed.toFloat() / dailyLimit.toFloat()).coerceAtMost(1f)
                             LinearProgressIndicator(
-                                progress = { (todayUsed.toFloat() / dailyLimit.toFloat()).coerceAtMost(1f) },
+                                progress = progressValue,
                                 modifier = Modifier.fillMaxWidth().height(10.dp).clip(RoundedCornerShape(5.dp)),
                                 color = if (todayUsed > dailyLimit) BloomError else BloomPrimary
                             )

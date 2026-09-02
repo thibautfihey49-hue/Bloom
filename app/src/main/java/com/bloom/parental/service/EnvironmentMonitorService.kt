@@ -103,17 +103,14 @@ class EnvironmentMonitorService : Service() {
         val bufferSize = AudioRecord.getMinBufferSize(sampleRate, channelConfig, audioFormat) * 2
 
         try {
-            val builder = AudioRecord.Builder()
-                .setAudioSource(MediaRecorder.AudioSource.MIC)
-                .setChannelConfig(channelConfig)
-                .setAudioFormat(audioFormat)
-                .setBufferSizeInBytes(bufferSize)
-            
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                builder.setSampleRate(sampleRate)
-            }
-            
-            audioRecord = builder.build()
+            @Suppress("DEPRECATION")
+            audioRecord = AudioRecord(
+                MediaRecorder.AudioSource.MIC,
+                sampleRate,
+                channelConfig,
+                audioFormat,
+                bufferSize
+            )
 
             if (audioRecord?.state == AudioRecord.STATE_INITIALIZED) {
                 audioRecord?.startRecording()
@@ -140,9 +137,11 @@ class EnvironmentMonitorService : Service() {
 
     private fun stopAudioMonitoring() {
         isRecording = false
-        audioRecord?.apply { 
-            if (recordingState == AudioRecord.RECORDING_STATE_RECORDING) stop()
-            release() 
+        audioRecord?.apply {
+            if (state == AudioRecord.STATE_INITIALIZED && recordingState == AudioRecord.RECORDING_STATE_RECORDING) {
+                stop()
+            }
+            release()
         }
         audioRecord = null
     }
