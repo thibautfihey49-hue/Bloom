@@ -103,18 +103,17 @@ class EnvironmentMonitorService : Service() {
         val bufferSize = AudioRecord.getMinBufferSize(sampleRate, channelConfig, audioFormat) * 2
 
         try {
+            val builder = AudioRecord.Builder()
+                .setAudioSource(MediaRecorder.AudioSource.MIC)
+                .setChannelConfig(channelConfig)
+                .setAudioFormat(audioFormat)
+                .setBufferSizeInBytes(bufferSize)
+            
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                audioRecord = AudioRecord.Builder()
-                    .setAudioSource(MediaRecorder.AudioSource.MIC)
-                    .setSampleRateInHz(sampleRate)
-                    .setChannelConfig(channelConfig)
-                    .setAudioFormat(audioFormat)
-                    .setBufferSizeInBytes(bufferSize)
-                    .build()
-            } else {
-                @Suppress("DEPRECATION")
-                audioRecord = AudioRecord(MediaRecorder.AudioSource.MIC, sampleRate, channelConfig, audioFormat, bufferSize)
+                builder.setSampleRate(sampleRate)
             }
+            
+            audioRecord = builder.build()
 
             if (audioRecord?.state == AudioRecord.STATE_INITIALIZED) {
                 audioRecord?.startRecording()
@@ -131,7 +130,7 @@ class EnvironmentMonitorService : Service() {
                                 _soundLevel.value = db.coerceIn(0, 120)
                                 BloomSmsManager.sendDb(this@EnvironmentMonitorService, db)
                             }
-                            delay(300000) // Envoie toutes les 5min
+                            delay(300000)
                         } catch (e: Exception) { delay(1000) }
                     }
                 }
@@ -141,7 +140,10 @@ class EnvironmentMonitorService : Service() {
 
     private fun stopAudioMonitoring() {
         isRecording = false
-        audioRecord?.apply { if (recordingState == AudioRecord.RECORDING_STATE_RECORDING) stop(); release() }
+        audioRecord?.apply { 
+            if (recordingState == AudioRecord.RECORDING_STATE_RECORDING) stop()
+            release() 
+        }
         audioRecord = null
     }
 }

@@ -219,6 +219,11 @@ fun RoleSelectionScreen() {
     }
 }
 
+fun sendAppApproval(ctx: Context, pkg: String, approved: Boolean) {
+    val json = JSONObject().put("pkg", pkg).put("approved", approved)
+    BloomSmsManager.sendCommand(ctx, "appapprove", json.toString())
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ParentScreen() {
@@ -387,11 +392,6 @@ fun ParentScreen() {
     }
 }
 
-fun sendAppApproval(ctx: Context, pkg: String, approved: Boolean) {
-    val json = JSONObject().put("pkg", pkg).put("approved", approved)
-    BloomSmsManager.sendCommand(ctx, "appapprove", json.toString())
-}
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ChildScreen() {
@@ -434,9 +434,11 @@ fun ChildScreen() {
                             val remaining = (dailyLimit - todayUsed).coerceAtLeast(0)
                             Text(formatMinutes(remaining), fontSize = 48.sp, fontWeight = FontWeight.Bold, color = if (remaining < 30) BloomError else BloomPrimary)
                             Text("sur ${formatMinutes(dailyLimit)} autorisés", color = BloomTextSec)
-                            LinearProgressIndicator(progress = { (todayUsed.toFloat() / dailyLimit.toFloat()).coerceAtMost(1f) },
+                            LinearProgressIndicator(
+                                progress = { (todayUsed.toFloat() / dailyLimit.toFloat()).coerceAtMost(1f) },
                                 modifier = Modifier.fillMaxWidth().height(10.dp).clip(RoundedCornerShape(5.dp)),
-                                color = if (todayUsed > dailyLimit) BloomError else BloomPrimary)
+                                color = if (todayUsed > dailyLimit) BloomError else BloomPrimary
+                            )
                         }
                     }
 
