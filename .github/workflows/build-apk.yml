@@ -1,5 +1,4 @@
-name: 📦 Build Bloom APK Debug
-
+name: 📦 Build APK
 on:
   push:
     branches: [ main ]
@@ -7,28 +6,54 @@ on:
 
 jobs:
   build:
-    name: 🔨 Compile l'APK
+    name: 🔨 Compiler l'APK
     runs-on: ubuntu-latest
+    timeout-minutes: 15
+
     steps:
-      - name: 📥 Récupère le code
+      - name: 📥 Récupérer le code
         uses: actions/checkout@v4
 
-      - name: ☕ Configure Java 17
+      - name: ☕ Installer Java 17
         uses: actions/setup-java@v4
         with:
           java-version: '17'
           distribution: 'temurin'
-          cache: 'gradle'
 
-      - name: 🔨 Donne les droits à Gradle
-        run: chmod +x ./gradlew
+      - name: 🔧 Préparer Gradle
+        run: |
+          chmod +x gradlew
+          ls -la gradlew
 
-      - name: 📦 Compile l'APK Debug
-        run: ./gradlew assembleDebug
+      - name: 📦 Mise en cache Gradle
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
 
-      - name: ✅ Téléverse l'APK
+      - name: 🧹 Nettoyer le projet
+        run: ./gradlew clean --no-daemon
+
+      - name: 🔨 Compiler l'APK
+        run: ./gradlew assembleDebug --no-daemon --stacktrace
+
+      - name: ✅ Vérifier l'APK
+        run: |
+          if [ -f "app/build/outputs/apk/debug/app-debug.apk" ]; then
+            echo "✅ APK généré avec succès !"
+            ls -lh app/build/outputs/apk/debug/app-debug.apk
+          else
+            echo "❌ ERREUR : APK introuvable !"
+            exit 1
+          fi
+
+      - name: 📤 Télécharger l'APK
         uses: actions/upload-artifact@v4
         with:
-          name: Bloom-APK-Debug
+          name: Bloom-APK-Fonctionnel
           path: app/build/outputs/apk/debug/app-debug.apk
           retention-days: 30
