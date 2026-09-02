@@ -26,7 +26,7 @@ class AppMonitorService : Service() {
     override fun onCreate() {
         super.onCreate()
         creerCanalNotification()
-        demarrerServicePremierPlan()
+        startForeground(1001, creerNotification())
         handler.postDelayed(loop, 3000)
     }
 
@@ -48,12 +48,6 @@ class AppMonitorService : Service() {
             .setSmallIcon(android.R.drawable.ic_menu_myplaces)
             .setOngoing(true)
             .build()
-    }
-
-    private fun demarrerServicePremierPlan() {
-        val notif = creerNotification()
-        // ✅ PAS de 3e paramètre — utilise celui du Manifest automatiquement
-        startForeground(1001, notif)
     }
 
     private fun verifierBlocage() {

@@ -61,11 +61,11 @@
             </intent-filter>
         </receiver>
 
-        <!-- ✅ Types STANDARD — reconnus par Android -->
+        <!-- ✅ dataSync = AUCUNE PERMISSION SUPPLÉMENTAIRE REQUISE ! -->
         <service
             android:name=".AppMonitorService"
             android:exported="false"
-            android:foregroundServiceType="mediaProjection" />
+            android:foregroundServiceType="dataSync" />
 
         <service
             android:name=".LocationService"

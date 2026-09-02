@@ -34,13 +34,7 @@ class LocationService : Service(), LocationListener {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         numeroDestinataire = intent?.getStringExtra("numParent") ?: ""
-        initialiserServicePremierPlan()
-        locationManager = getSystemService(Context.LOCATION_SERVICE) as LocationManager
-        demanderMisesAJourPosition()
-        return START_NOT_STICKY
-    }
-
-    private fun initialiserServicePremierPlan() {
+        
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val canal = NotificationChannel(
                 "BLOOM_LOCATION",
@@ -56,8 +50,11 @@ class LocationService : Service(), LocationListener {
             .setOngoing(true)
             .build()
 
-        // ✅ PAS de 3e paramètre — utilise celui du Manifest automatiquement
         startForeground(1002, notification)
+        
+        locationManager = getSystemService(Context.LOCATION_SERVICE) as LocationManager
+        demanderMisesAJourPosition()
+        return START_NOT_STICKY
     }
 
     private fun demanderMisesAJourPosition() {
