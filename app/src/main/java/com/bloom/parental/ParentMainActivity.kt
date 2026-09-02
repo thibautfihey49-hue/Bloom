@@ -85,8 +85,8 @@ class ParentMainActivity : AppCompatActivity() {
         configurerBoutons()
         demanderPermissions()
 
-        registerReceiver(reponseReceiver, IntentFilter("BLOOM_DEMANDE_TEMPS"))
-        registerReceiver(reponseReceiver, IntentFilter("android.provider.Telephony.SMS_RECEIVED"))
+        registerReceiver(reponseReceiver, IntentFilter("BLOOM_DEMANDE_TEMPS"), RECEIVER_NOT_EXPORTED)
+        registerReceiver(reponseReceiver, IntentFilter("android.provider.Telephony.SMS_RECEIVED"), RECEIVER_NOT_EXPORTED)
     }
 
     private fun referencerUI() {
