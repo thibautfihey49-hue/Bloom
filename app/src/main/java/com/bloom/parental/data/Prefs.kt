@@ -2,6 +2,7 @@ package com.bloom.parental.data
 
 import android.content.Context
 import android.content.SharedPreferences
+import org.json.JSONObject
 
 object Prefs {
     private lateinit var prefs: SharedPreferences
@@ -31,4 +32,73 @@ object Prefs {
     var pauseEndTime: Long
         get() = prefs.getLong("pause_end", 0L)
         set(value) = prefs.edit().putLong("pause_end", value).apply()
+
+    private const val APP_LIMITS = "app_limits"
+    private const val APP_BLOCKED = "app_blocked"
+    private const val PENDING_APPS = "pending_apps"
+
+    fun setAppLimit(packageName: String, minutes: Int) {
+        val json = JSONObject(prefs.getString(APP_LIMITS, "{}") ?: "{}")
+        json.put(packageName, minutes)
+        prefs.edit().putString(APP_LIMITS, json.toString()).apply()
+    }
+
+    fun getAppLimit(packageName: String, default: Int = 0): Int {
+        val json = JSONObject(prefs.getString(APP_LIMITS, "{}") ?: "{}")
+        return json.optInt(packageName, default)
+    }
+
+    fun getAllAppLimits(): Map<String, Int> {
+        val json = JSONObject(prefs.getString(APP_LIMITS, "{}") ?: "{}")
+        val map = mutableMapOf<String, Int>()
+        json.keys().forEach { key -> map[key] = json.getInt(key) }
+        return map
+    }
+
+    fun setAppBlocked(packageName: String, blocked: Boolean) {
+        val json = JSONObject(prefs.getString(APP_BLOCKED, "{}") ?: "{}")
+        if (blocked) json.put(packageName, true) else json.remove(packageName)
+        prefs.edit().putString(APP_BLOCKED, json.toString()).apply()
+    }
+
+    fun isAppBlocked(packageName: String): Boolean {
+        val json = JSONObject(prefs.getString(APP_BLOCKED, "{}") ?: "{}")
+        return json.optBoolean(packageName, false)
+    }
+
+    fun getAllBlockedApps(): Set<String> {
+        val json = JSONObject(prefs.getString(APP_BLOCKED, "{}") ?: "{}")
+        val set = mutableSetOf<String>()
+        json.keys().forEach { set.add(it) }
+        return set
+    }
+
+    // Demandes d'installation en attente
+    data class PendingApp(val packageName: String, val name: String, val description: String, val timestamp: Long)
+
+    fun addPendingApp(pkg: String, name: String, desc: String) {
+        val json = JSONObject(prefs.getString(PENDING_APPS, "{}") ?: "{}")
+        val appJson = JSONObject()
+        appJson.put("name", name)
+        appJson.put("description", desc)
+        appJson.put("timestamp", System.currentTimeMillis())
+        json.put(pkg, appJson)
+        prefs.edit().putString(PENDING_APPS, json.toString()).apply()
+    }
+
+    fun removePendingApp(pkg: String) {
+        val json = JSONObject(prefs.getString(PENDING_APPS, "{}") ?: "{}")
+        json.remove(pkg)
+        prefs.edit().putString(PENDING_APPS, json.toString()).apply()
+    }
+
+    fun getAllPendingApps(): List<PendingApp> {
+        val json = JSONObject(prefs.getString(PENDING_APPS, "{}") ?: "{}")
+        val list = mutableListOf<PendingApp>()
+        json.keys().forEach { pkg ->
+            val obj = json.getJSONObject(pkg)
+            list.add(PendingApp(pkg, obj.optString("name",""), obj.optString("description",""), obj.optLong("timestamp",0)))
+        }
+        return list.sortedByDescending { it.timestamp }
+    }
 }

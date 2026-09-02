@@ -1,9 +1,22 @@
 package com.bloom.parental.service
 
 import android.app.AppOpsManager
+import android.app.usage.UsageStats
 import android.app.usage.UsageStatsManager
 import android.content.Context
+import android.content.pm.ApplicationInfo
+import android.content.pm.PackageManager
+import com.bloom.parental.data.Prefs
 import java.util.concurrent.TimeUnit
+
+data class AppInfo(
+    val packageName: String,
+    val name: String,
+    val usedMinutes: Int,
+    val limitMinutes: Int,
+    val isBlocked: Boolean,
+    val isSystem: Boolean
+)
 
 class UsageStatsMonitor(private val ctx: Context) {
     private fun hasPermission(): Boolean {
@@ -37,25 +50,40 @@ class UsageStatsMonitor(private val ctx: Context) {
         }
     }
 
-    fun getByApp(): Map<String, Int> {
-        if (!hasPermission()) return emptyMap()
+    fun getAppsToday(): List<AppInfo> {
+        if (!hasPermission()) return emptyList()
         return try {
-            val result = mutableMapOf<String, Int>()
+            val pm = ctx.packageManager
             val usm = ctx.getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager
             val cal = java.util.Calendar.getInstance()
             cal.set(java.util.Calendar.HOUR_OF_DAY, 0)
             cal.set(java.util.Calendar.MINUTE, 0)
             val start = cal.timeInMillis
             val stats = usm.queryUsageStats(UsageStatsManager.INTERVAL_DAILY, start, System.currentTimeMillis())
-            stats.forEach {
-                val mins = TimeUnit.MILLISECONDS.toMinutes(it.totalTimeInForeground).toInt()
-                if (mins > 0) {
-                    result[it.packageName] = mins
+
+            val usageMap = mutableMapOf<String, Long>()
+            for (s in stats) {
+                usageMap[s.packageName] = (usageMap[s.packageName] ?: 0L) + s.totalTimeInForeground
+            }
+
+            val apps = mutableListOf<AppInfo>()
+            for ((pkg, time) in usageMap) {
+                if (time < 60000) continue
+                try {
+                    val info = pm.getApplicationInfo(pkg, 0)
+                    val name = info.loadLabel(pm).toString()
+                    val used = TimeUnit.MILLISECONDS.toMinutes(time).toInt()
+                    val limit = Prefs.getAppLimit(pkg, 0)
+                    val blocked = Prefs.isAppBlocked(pkg)
+                    val isSystem = (info.flags and ApplicationInfo.FLAG_SYSTEM) != 0
+                    apps.add(AppInfo(pkg, name, used, limit, blocked, isSystem))
+                } catch (e: PackageManager.NameNotFoundException) {
+                    continue
                 }
             }
-            result
+            apps.sortedByDescending { it.usedMinutes }
         } catch (e: Exception) {
-            emptyMap()
+            emptyList()
         }
     }
 }
