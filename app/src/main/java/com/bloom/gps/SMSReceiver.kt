@@ -4,7 +4,6 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.location.Location
 import android.provider.Telephony
 import android.telephony.SmsManager
 import android.util.Log
@@ -27,17 +26,11 @@ class SMSReceiver : BroadcastReceiver() {
         val reponseAutoActivee = prefs.getBoolean("REPONSE_AUTO", false)
 
         when {
-            // 📥 DEMANDE UNE POSITION
-            texte == "BLOOM_REQ" && reponseAutoActivee -> {
-                Log.d("BLOOM-DATA", "📩 DEMANDE — Envoi position à $numeroExpediteur")
-                envoyerPosition(context, numeroExpediteur)
-            }
-
-            // 📡 DÉMARRER MON SUIVI À DISTANCE
+            // 🟢 START REÇU → ACTIVER LE SUIVI + GPS
             texte == "BLOOM_START" && reponseAutoActivee -> {
-                prefs.edit().putBoolean("MON_SUIVI_ACTIF", true).apply()
+                prefs.edit().putBoolean("SUIVI_ACTIF", true).apply()
                 prefs.edit().putString("NUMERO_CIBLE", numeroExpediteur).apply()
-                Log.d("BLOOM-DATA", "📡 SUIVI DÉMARRÉ À DISTANCE PAR $numeroExpediteur")
+                Log.d("BLOOM-DATA", "🟢 SUIVI DÉMARRÉ PAR $numeroExpediteur — Envoi toutes les 10m")
                 
                 val startIntent = Intent("com.bloom.gps.DEMARRER_SUIVI")
                 startIntent.setPackage(context.packageName)
@@ -46,17 +39,17 @@ class SMSReceiver : BroadcastReceiver() {
                 envoyerPosition(context, numeroExpediteur) // Envoyer immédiatement
             }
 
-            // ⏹️ ARRÊTER MON SUIVI À DISTANCE
+            // 🔴 STOP REÇU → DÉSACTIVER LE SUIVI
             texte == "BLOOM_STOP" -> {
-                prefs.edit().putBoolean("MON_SUIVI_ACTIF", false).apply()
-                Log.d("BLOOM-DATA", "⏹️ SUIVI ARRÊTÉ À DISTANCE PAR $numeroExpediteur")
+                prefs.edit().putBoolean("SUIVI_ACTIF", false).apply()
+                Log.d("BLOOM-DATA", "🔴 SUIVI ARRÊTÉ PAR $numeroExpediteur")
                 
                 val stopIntent = Intent("com.bloom.gps.ARRETER_SUIVI")
                 stopIntent.setPackage(context.packageName)
                 context.sendBroadcast(stopIntent)
             }
 
-            // 📥 POSITION REÇUE DE L'AUTRE
+            // 📥 POSITION REÇUE
             texte.startsWith("BLOOM_POS:") -> {
                 val coords = texte.removePrefix("BLOOM_POS:").split(":")
                 if (coords.size >= 2) {

@@ -9,7 +9,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:padding="10dp"
+        android:padding="12dp"
         android:background="@color/white">
         
         <TextView
@@ -17,32 +17,36 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="🔄 Initialisation..."
-            android:textSize="13sp"
-            android:textColor="@color/purple_500"/>
+            android:textSize="14sp"
+            android:textColor="@color/purple_500"
+            android:gravity="center"/>
 
         <TextView
             android:id="@+id/tvMoi"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="🔵 MOI: —"
-            android:textSize="11sp"
-            android:textColor="@color/blue_500"/>
+            android:textSize="12sp"
+            android:textColor="@color/blue_500"
+            android:layout_marginTop="4dp"/>
 
         <TextView
             android:id="@+id/tvLui"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="🔴 LUI: —"
-            android:textSize="11sp"
-            android:textColor="@color/red_500"/>
+            android:textSize="12sp"
+            android:textColor="@color/red_500"
+            android:layout_marginTop="2dp"/>
 
         <TextView
             android:id="@+id/tvDistance"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="📡 Dernier envoi: —"
-            android:textSize="10sp"
-            android:textColor="@color/orange_500"/>
+            android:textSize="11sp"
+            android:textColor="@color/orange_500"
+            android:layout_marginTop="2dp"/>
     </LinearLayout>
 
     <org.osmdroid.views.MapView
@@ -55,14 +59,14 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:padding="10dp"
+        android:padding="12dp"
         android:background="@color/white">
 
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="📱 Mon numéro (+336...)"
-            android:textSize="11sp"
+            android:textSize="12sp"
             android:textColor="@color/purple_500"/>
         <EditText
             android:id="@+id/etMonNumero"
@@ -70,15 +74,15 @@
             android:layout_height="wrap_content"
             android:hint="+336123456789"
             android:inputType="phone"
-            android:textSize="13sp"
-            android:padding="6dp"
-            android:layout_marginBottom="6dp"/>
+            android:textSize="14sp"
+            android:padding="8dp"
+            android:layout_marginBottom="8dp"/>
 
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="📱 Numéro de l'autre"
-            android:textSize="11sp"
+            android:textSize="12sp"
             android:textColor="@color/red_500"/>
         <EditText
             android:id="@+id/etAutreNumero"
@@ -86,111 +90,49 @@
             android:layout_height="wrap_content"
             android:hint="+33698765432"
             android:inputType="phone"
-            android:textSize="13sp"
-            android:padding="6dp"/>
+            android:textSize="14sp"
+            android:padding="8dp"/>
     </LinearLayout>
 
-    <!-- 🎮 CONTRÔLE À DISTANCE -->
+    <!-- 🎮 2 BOUTONS SEULEMENT -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:padding="8dp"
+        android:orientation="horizontal"
+        android:padding="16dp"
         android:background="#F0F4FF">
-        
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="🎮 CONTRÔLE À DISTANCE"
-            android:textSize="12sp"
-            android:textColor="@color/purple_500"
-            android:textStyle="bold"
-            android:gravity="center"/>
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:layout_marginTop="6dp">
-
-            <Button
-                android:id="@+id/btnDemander"
-                android:layout_width="0dp"
-                android:layout_height="40dp"
-                android:layout_weight="1"
-                android:text="📥 Demander"
-                android:textSize="10sp"
-                android:backgroundTint="@color/red_500"
-                android:layout_marginEnd="3dp"/>
-
-            <Button
-                android:id="@+id/btnRepondre"
-                android:layout_width="0dp"
-                android:layout_height="40dp"
-                android:layout_weight="1"
-                android:text="📤 Répondre"
-                android:textSize="10sp"
-                android:backgroundTint="@color/green_500"
-                android:layout_marginStart="3dp"
-                android:layout_marginEnd="3dp"/>
-
-            <Button
-                android:id="@+id/btnSuivre"
-                android:layout_width="0dp"
-                android:layout_height="40dp"
-                android:layout_weight="1"
-                android:text="🔄 Réponse auto"
-                android:textSize="10sp"
-                android:backgroundTint="@color/orange_500"
-                android:layout_marginStart="3dp"/>
-        </LinearLayout>
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:layout_marginTop="6dp">
-
-            <Button
-                android:id="@+id/btnDemarrerLui"
-                android:layout_width="0dp"
-                android:layout_height="40dp"
-                android:layout_weight="1"
-                android:text="▶️ Lui démarrer"
-                android:textSize="10sp"
-                android:backgroundTint="@color/green_500"
-                android:layout_marginEnd="3dp"/>
-
-            <Button
-                android:id="@+id/btnArreterLui"
-                android:layout_width="0dp"
-                android:layout_height="40dp"
-                android:layout_weight="1"
-                android:text="⏹️ Lui arrêter"
-                android:textSize="10sp"
-                android:backgroundTint="@color/red_500"
-                android:layout_marginStart="3dp"
-                android:layout_marginEnd="3dp"/>
-
-            <Button
-                android:id="@+id/btnSuiviContinu"
-                android:layout_width="0dp"
-                android:layout_height="40dp"
-                android:layout_weight="1"
-                android:text="📡 Moi suivre"
-                android:textSize="10sp"
-                android:backgroundTint="@color/blue_500"
-                android:layout_marginStart="3dp"/>
-        </LinearLayout>
 
         <Button
-            android:id="@+id/btnPermissions"
-            android:layout_width="match_parent"
-            android:layout_height="38dp"
-            android:text="🔑 Permissions"
-            android:textSize="11sp"
-            android:backgroundTint="@color/purple_500"
-            android:layout_marginTop="6dp"/>
+            android:id="@+id/btnStart"
+            android:layout_width="0dp"
+            android:layout_height="70dp"
+            android:layout_weight="1"
+            android:text="▶️ DÉMARRER LE SUIVI"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:backgroundTint="@color/green_500"
+            android:layout_marginEnd="8dp"/>
+
+        <Button
+            android:id="@+id/btnStop"
+            android:layout_width="0dp"
+            android:layout_height="70dp"
+            android:layout_weight="1"
+            android:text="⏹️ ARRÊTER TOUT"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:backgroundTint="@color/red_500"
+            android:layout_marginStart="8dp"/>
     </LinearLayout>
+
+    <Button
+        android:id="@+id/btnPermissions"
+        android:layout_width="match_parent"
+        android:layout_height="45dp"
+        android:text="🔑 Accorder les permissions"
+        android:textSize="13sp"
+        android:backgroundTint="@color/purple_500"
+        android:layout_marginHorizontal="16dp"
+        android:layout_marginBottom="16dp"/>
 
 </LinearLayout>
