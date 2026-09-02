@@ -39,7 +39,6 @@ class EnvironmentMonitorService : Service() {
                 context.startService(intent)
             }
         }
-
         fun stop(context: Context) {
             context.stopService(Intent(context, EnvironmentMonitorService::class.java))
         }
@@ -47,14 +46,15 @@ class EnvironmentMonitorService : Service() {
 
     override fun onCreate() {
         super.onCreate()
-        try {
-            createNotificationChannel()
-            startForeground(1, createNotification())
-            startAudioMonitoring()
-        } catch (e: Exception) { e.printStackTrace() }
+        createNotificationChannel()
+        startForeground(1, createNotification())  # ⚡ IMMÉDIAT — DANS LES 5s !
     }
 
-    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int = START_STICKY
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        if (!isRecording) startAudioMonitoring()
+        return START_STICKY
+    }
+
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onDestroy() {
