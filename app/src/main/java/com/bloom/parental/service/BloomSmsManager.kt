@@ -1,11 +1,7 @@
 package com.bloom.parental.service
 
-import android.content.BroadcastReceiver
 import android.content.Context
-import android.content.Intent
-import android.content.IntentFilter
 import android.telephony.SmsManager
-import android.telephony.SmsMessage
 import com.bloom.parental.data.Prefs
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -57,19 +53,5 @@ object BloomSmsManager {
         }
         _cmd.value = Pair(parts[0], payload)
         return true
-    }
-}
-
-class SmsReceiver : BroadcastReceiver() {
-    override fun onReceive(ctx: Context, intent: Intent) {
-        if (intent.action == "android.provider.Telephony.SMS_RECEIVED") {
-            val pdus = intent.extras?.get("pdus") as? Array<*> ?: return
-            val messages = pdus.map { SmsMessage.createFromPdu(it as ByteArray) }
-            val sender = messages.first().originatingAddress ?: return
-            val body = messages.joinToString(" ") { it.messageBody }
-            if (BloomSmsManager.processMessage(sender, body)) {
-                abortBroadcast()
-            }
-        }
     }
 }

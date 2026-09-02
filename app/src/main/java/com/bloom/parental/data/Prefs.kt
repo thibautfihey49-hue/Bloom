@@ -18,6 +18,8 @@ object Prefs {
         get() = prefs.getString("other_phone", "") ?: ""
         set(value) = prefs.edit().putString("other_phone", value).apply()
 
+    fun getOtherPhone(ctx: Context): String? = otherPhone.ifEmpty { null }
+
     var dailyLimit: Int
         get() = prefs.getInt("daily_limit", 240)
         set(value) = prefs.edit().putInt("daily_limit", value).apply()
