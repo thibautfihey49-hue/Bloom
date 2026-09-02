@@ -15,7 +15,6 @@ import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
 
 class MainActivity : AppCompatActivity() {
-    
     private lateinit var mapView: MapView
     private lateinit var tvStatut: TextView
     private lateinit var btnPermissions: Button
@@ -23,9 +22,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        
         Configuration.getInstance().load(applicationContext, PreferenceManager.getDefaultSharedPreferences(applicationContext))
-        
         setContentView(R.layout.activity_main)
 
         tvStatut = findViewById(R.id.tvStatut)
@@ -33,7 +30,6 @@ class MainActivity : AppCompatActivity() {
         mapView = findViewById(R.id.mapView)
 
         configurerCarte()
-
         btnPermissions.setOnClickListener { demanderPermissions() }
 
         if (verifierPermissions()) {
@@ -50,7 +46,6 @@ class MainActivity : AppCompatActivity() {
             tvStatut.text = "🔄 Chargement de la carte..."
             mapView.setTileSource(TileSourceFactory.MAPNIK)
             mapView.setMultiTouchControls(true)
-            mapView.isTilesScaledToDpi = true
             mapView.controller.setCenter(GeoPoint(47.4784, -0.5632))
             mapView.controller.setZoom(12.0)
             tvStatut.text = "✅ Carte chargée !"

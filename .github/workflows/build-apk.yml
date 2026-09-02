@@ -19,9 +19,9 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
-      - name: 🛠️ Ajouter Gradle Wrapper
+      - name: 🛠️ Générer Gradle Wrapper 8.2 (COMPATIBLE !)
         run: |
-          gradle wrapper --gradle-version 8.2
+          gradle wrapper --gradle-version 8.2 --distribution-type all
           chmod +x gradlew
 
       - name: 🔨 Compiler l'APK
