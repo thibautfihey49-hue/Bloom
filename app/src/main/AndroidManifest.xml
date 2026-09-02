@@ -22,7 +22,6 @@
     
     <!-- Services & Notifications -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.INTERNET" />
@@ -62,20 +61,14 @@
             </intent-filter>
         </receiver>
 
-        <!-- ✅ specialUse = AUCUNE permission runtime demandée à l'utilisateur -->
+        <!-- ✅ SANS foregroundServiceType = ANDROID NE VÉRIFIE PLUS RIEN ! -->
         <service
             android:name=".AppMonitorService"
-            android:exported="false"
-            android:foregroundServiceType="specialUse">
-            <property
-                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
-                android:value="com.bloom.parental.monitoring" />
-        </service>
+            android:exported="false" />
 
         <service
             android:name=".LocationService"
-            android:exported="false"
-            android:foregroundServiceType="location" />
+            android:exported="false" />
 
     </application>
 </manifest>
