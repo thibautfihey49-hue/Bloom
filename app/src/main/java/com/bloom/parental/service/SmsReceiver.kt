@@ -11,59 +11,36 @@ import org.json.JSONObject
 class SmsReceiver : BroadcastReceiver() {
     override fun onReceive(ctx: Context, intent: Intent) {
         if (intent.action == Telephony.Sms.Intents.SMS_RECEIVED_ACTION) {
-            val messages = Telephony.Sms.Intents.getMessagesFromIntent(intent)
-            for (msg in messages) {
+            for (msg in Telephony.Sms.Intents.getMessagesFromIntent(intent)) {
                 val body = msg.messageBody ?: continue
-                val sender = msg.originatingAddress ?: continue
-
                 if (body.startsWith("🌸BLOOM|")) {
                     abortBroadcast()
-                    processCommand(ctx, sender, body)
+                    processCommand(ctx, body.split("|"))
                 }
             }
         }
     }
 
-    private fun processCommand(ctx: Context, sender: String, body: String) {
-        val parts = body.split("|")
+    private fun processCommand(ctx: Context, parts: List<String>) {
         if (parts.size < 3) return
-        val type = parts[1]
-        val payload = parts[2]
-
-        when (type) {
+        when (parts[1]) {
             "CMD" -> {
-                try {
-                    val json = JSONObject(payload)
-                    val cmd = json.optString("c", "")
-                    val value = json.optString("v", "")
-                    when (cmd) {
-                        "pause" -> Prefs.pauseEndTime = if (value == "1") Long.MAX_VALUE else 0L
-                        "limit" -> value.toIntOrNull()?.let { Prefs.dailyLimit = it }
-                        "applimit" -> {
-                            val appJson = JSONObject(value)
-                            val pkg = appJson.optString("pkg", "")
-                            val lim = appJson.optInt("limit", 0)
-                            if (pkg.isNotEmpty()) Prefs.setAppLimit(pkg, lim)
-                        }
-                        "appblocked" -> {
-                            val appJson = JSONObject(value)
-                            val pkg = appJson.optString("pkg", "")
-                            val blocked = appJson.optBoolean("blocked", false)
-                            if (pkg.isNotEmpty()) Prefs.setAppBlocked(pkg, blocked)
-                        }
-                        "appapprove" -> {
-                            val appJson = JSONObject(value)
-                            val pkg = appJson.optString("pkg", "")
-                            val approved = appJson.optBoolean("approved", false)
-                            if (pkg.isNotEmpty()) {
-                                Prefs.removePendingApp(pkg)
-                                Toast.makeText(ctx, if (approved) "✅ Installation autorisée" else "🚫 Installation refusée", Toast.LENGTH_LONG).show()
-                            }
-                        }
+                val json = JSONObject(parts[2])
+                when (json.optString("c")) {
+                    "pause" -> Prefs.pauseEndTime = if (json.optString("v") == "1") Long.MAX_VALUE else 0L
+                    "limit" -> json.optString("v").toIntOrNull()?.let { Prefs.dailyLimit = it }
+                    "applimit" -> JSONObject(json.optString("v")).let {
+                        Prefs.setAppLimit(it.optString("pkg"), it.optInt("limit"))
                     }
-                } catch (e: Exception) {}
+                    "appblocked" -> JSONObject(json.optString("v")).let {
+                        Prefs.setAppBlocked(it.optString("pkg"), it.optBoolean("blocked"))
+                    }
+                    "appapprove" -> JSONObject(json.optString("v")).let {
+                        Prefs.removePendingApp(it.optString("pkg"))
+                        Toast.makeText(ctx, if (it.optBoolean("approved")) "✅ Autorisé" else "🚫 Refusé", Toast.LENGTH_SHORT).show()
+                    }
+                }
             }
-            "USAGE", "LOC", "NEWAPP" -> BloomSmsManager.processMessage(sender, body)
         }
     }
 }

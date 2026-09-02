@@ -48,13 +48,6 @@ object Prefs {
         return json.optInt(packageName, default)
     }
 
-    fun getAllAppLimits(): Map<String, Int> {
-        val json = JSONObject(prefs.getString(APP_LIMITS, "{}") ?: "{}")
-        val map = mutableMapOf<String, Int>()
-        json.keys().forEach { key -> map[key] = json.getInt(key) }
-        return map
-    }
-
     fun setAppBlocked(packageName: String, blocked: Boolean) {
         val json = JSONObject(prefs.getString(APP_BLOCKED, "{}") ?: "{}")
         if (blocked) json.put(packageName, true) else json.remove(packageName)
@@ -66,22 +59,11 @@ object Prefs {
         return json.optBoolean(packageName, false)
     }
 
-    fun getAllBlockedApps(): Set<String> {
-        val json = JSONObject(prefs.getString(APP_BLOCKED, "{}") ?: "{}")
-        val set = mutableSetOf<String>()
-        json.keys().forEach { set.add(it) }
-        return set
-    }
-
-    // Demandes d'installation en attente
     data class PendingApp(val packageName: String, val name: String, val description: String, val timestamp: Long)
 
     fun addPendingApp(pkg: String, name: String, desc: String) {
         val json = JSONObject(prefs.getString(PENDING_APPS, "{}") ?: "{}")
-        val appJson = JSONObject()
-        appJson.put("name", name)
-        appJson.put("description", desc)
-        appJson.put("timestamp", System.currentTimeMillis())
+        val appJson = JSONObject().put("name", name).put("description", desc).put("timestamp", System.currentTimeMillis())
         json.put(pkg, appJson)
         prefs.edit().putString(PENDING_APPS, json.toString()).apply()
     }

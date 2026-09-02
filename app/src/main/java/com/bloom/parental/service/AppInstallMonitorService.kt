@@ -4,10 +4,8 @@ import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.Service
-import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
-import android.content.IntentFilter
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
 import android.os.Build
@@ -18,6 +16,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import org.json.JSONObject
 
 class AppInstallMonitorService : Service() {
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
@@ -101,7 +100,7 @@ class AppInstallMonitorService : Service() {
         scope.launch {
             while (true) {
                 detectNewApps()
-                delay(5000) // Vérifie toutes les 5 secondes
+                delay(5000)
             }
         }
     }
@@ -109,7 +108,6 @@ class AppInstallMonitorService : Service() {
     private fun detectNewApps() {
         val pm = packageManager
         val currentPackages = pm.getInstalledApplications(0).map { it.packageName }.toSet()
-
         val newPackages = currentPackages subtract lastPackages
 
         for (pkg in newPackages) {
@@ -117,41 +115,17 @@ class AppInstallMonitorService : Service() {
                 val info = pm.getApplicationInfo(pkg, 0)
                 val name = info.loadLabel(pm).toString()
                 val desc = getAppDescription(pm, pkg, info)
-
-                // Ajoute en attente et notifie le parent par SMS
                 Prefs.addPendingApp(pkg, name, desc)
-
-                // Envoie la demande au parent
-                val msg = JSONObject()
-                    .put("pkg", pkg)
-                    .put("name", name)
-                    .put("description", desc)
-                    .put("action", "NEW_APP_REQUEST")
+                val msg = JSONObject().put("pkg", pkg).put("name", name).put("description", desc)
                 BloomSmsManager.sendCommand(this, "newapp", msg.toString())
-
-            } catch (e: Exception) {
-                e.printStackTrace()
-            }
+            } catch (e: Exception) { }
         }
-
         lastPackages = currentPackages.toMutableSet()
     }
 
     private fun getAppDescription(pm: PackageManager, pkg: String, info: ApplicationInfo): String {
-        return try {
-            // Essaye de récupérer la description depuis le manifeste ou le nom + infos
-            val isSystem = (info.flags and ApplicationInfo.FLAG_SYSTEM) != 0
-            val isDebug = (info.flags and ApplicationInfo.FLAG_DEBUGGABLE) != 0
-            val sourceDir = info.sourceDir
-
-            """
-📦 $pkg
-🔧 Système: ${if (isSystem) "Oui" else "Non"}
-🐛 Debug: ${if (isDebug) "Oui" else "Non"}
-📂 Emplacement: ${sourceDir.take(40)}...
-            """.trimIndent()
-        } catch (e: Exception) {
-            "Package: $pkg"
-        }
+        val isSystem = (info.flags and ApplicationInfo.FLAG_SYSTEM) != 0
+        val isDebug = (info.flags and ApplicationInfo.FLAG_DEBUGGABLE) != 0
+        return "📦 $pkg\n🔧 Système: ${if (isSystem) "Oui" else "Non"}\n🐛 Debug: ${if (isDebug) "Oui" else "Non"}"
     }
 }
