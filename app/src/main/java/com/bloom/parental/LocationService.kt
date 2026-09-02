@@ -58,7 +58,8 @@ class LocationService : Service(), LocationListener {
 
         when {
             Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE -> {
-                startForeground(1002, notification, Service.FOREGROUND_SERVICE_TYPE_LOCATION)
+                // FOREGROUND_SERVICE_TYPE_LOCATION = 8
+                startForeground(1002, notification, 8)
             }
             Build.VERSION.SDK_INT >= Build.VERSION_CODES.O -> {
                 startForeground(1002, notification)

@@ -54,11 +54,8 @@ class AppMonitorService : Service() {
         val notif = creerNotification()
         when {
             Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE -> {
-                startForeground(
-                    1001,
-                    notif,
-                    Service.FOREGROUND_SERVICE_TYPE_SPECIAL_USE
-                )
+                // FOREGROUND_SERVICE_TYPE_SPECIAL_USE = 64
+                startForeground(1001, notif, 64)
             }
             Build.VERSION.SDK_INT >= Build.VERSION_CODES.O -> {
                 startForeground(1001, notif)
