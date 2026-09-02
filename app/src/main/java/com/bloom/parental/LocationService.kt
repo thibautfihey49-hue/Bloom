@@ -37,7 +37,7 @@ class LocationService : Service(), LocationListener {
         numeroDestinataire = intent?.getStringExtra("numParent") ?: ""
         locationManager = getSystemService(Context.LOCATION_SERVICE) as LocationManager
 
-        // ✅ VÉRIFIE D'ABORD LA PERMISSION — PUIS DÉMARRE LE SERVICE PREMIER PLAN
+        // ✅ VÉRIFIE D'ABORD LA PERMISSION — PUIS DÉMARRE
         if (ActivityCompat.checkSelfPermission(
                 this,
                 Manifest.permission.ACCESS_FINE_LOCATION
@@ -71,7 +71,6 @@ class LocationService : Service(), LocationListener {
             .setOngoing(true)
             .build()
 
-        // ✅ DÉMARRE SEULEMENT SI PERMISSION ACCORDÉE
         startForeground(1002, notification)
         serviceDemarre = true
     }

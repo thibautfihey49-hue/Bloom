@@ -12,6 +12,9 @@
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     
+    <!-- ✅ OBLIGATOIRE pour Android 14+ : service de localisation en premier plan -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
+    
     <!-- Surveillance & Blocage Apps -->
     <uses-permission android:name="android.permission.PACKAGE_USAGE_STATS"
         tools:ignore="ProtectedPermissions" />
@@ -62,7 +65,7 @@
             </intent-filter>
         </receiver>
 
-        <!-- ✅ OBLIGATOIRE: specialUse + propriété subtype -->
+        <!-- ✅ Surveillance : specialUse -->
         <service
             android:name=".AppMonitorService"
             android:exported="false"
@@ -72,7 +75,7 @@
                 android:value="com.bloom.parental.monitoring" />
         </service>
 
-        <!-- ✅ OBLIGATOIRE: location -->
+        <!-- ✅ Localisation : location -->
         <service
             android:name=".LocationService"
             android:exported="false"
