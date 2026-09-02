@@ -4,30 +4,125 @@
     android:layout_height="match_parent"
     android:orientation="vertical"
     android:background="@color/gray_200">
+
+    <!-- 📌 BARRE DE STATUT -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:padding="12dp"
+        android:padding="10dp"
         android:background="@color/white">
+        
         <TextView
             android:id="@+id/tvStatut"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="🔄 Initialisation..."
-            android:textSize="14sp"
+            android:textSize="13sp"
             android:textColor="@color/purple_500"/>
+
+        <TextView
+            android:id="@+id/tvMoi"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="🔵 MOI: —"
+            android:textSize="11sp"
+            android:textColor="@color/blue_500"/>
+
+        <TextView
+            android:id="@+id/tvLui"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="🔴 LUI: —"
+            android:textSize="11sp"
+            android:textColor="@color/red_500"/>
     </LinearLayout>
+
+    <!-- 🗺️ LA CARTE -->
     <org.osmdroid.views.MapView
         android:id="@+id/mapView"
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"/>
-    <Button
-        android:id="@+id/btnPermissions"
+
+    <!-- 📱 CHAMPS NUMÉROS -->
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="🔑 Accorder permissions"
-        android:backgroundTint="@color/purple_500"
-        android:layout_margin="12dp"/>
+        android:orientation="vertical"
+        android:padding="10dp"
+        android:background="@color/white">
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="📱 Mon numéro"
+            android:textSize="11sp"
+            android:textColor="@color/gray_700"/>
+        <EditText
+            android:id="@+id/etMonNumero"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="+336123456789"
+            android:inputType="phone"
+            android:textSize="13sp"
+            android:padding="6dp"
+            android:layout_marginBottom="6dp"/>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="📱 Numéro de l'autre"
+            android:textSize="11sp"
+            android:textColor="@color/gray_700"/>
+        <EditText
+            android:id="@+id/etAutreNumero"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="+33698765432"
+            android:inputType="phone"
+            android:textSize="13sp"
+            android:padding="6dp"/>
+    </LinearLayout>
+
+    <!-- 🎯 BOUTONS D'ACTION -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:padding="10dp"
+        android:background="@color/white">
+
+        <Button
+            android:id="@+id/btnPermissions"
+            android:layout_width="0dp"
+            android:layout_height="45dp"
+            android:layout_weight="1"
+            android:text="🔑 Permissions"
+            android:textSize="12sp"
+            android:backgroundTint="@color/purple_500"
+            android:layout_marginEnd="5dp"/>
+
+        <Button
+            android:id="@+id/btnEnvoyer"
+            android:layout_width="0dp"
+            android:layout_height="45dp"
+            android:layout_weight="1"
+            android:text="📤 M'envoyer"
+            android:textSize="12sp"
+            android:backgroundTint="@color/blue_500"
+            android:layout_marginStart="5dp"
+            android:layout_marginEnd="5dp"/>
+
+        <Button
+            android:id="@+id/btnRecevoir"
+            android:layout_width="0dp"
+            android:layout_height="45dp"
+            android:layout_weight="1"
+            android:text="📥 Le suivre"
+            android:textSize="12sp"
+            android:backgroundTint="@color/red_500"
+            android:layout_marginStart="5dp"/>
+    </LinearLayout>
+
 </LinearLayout>

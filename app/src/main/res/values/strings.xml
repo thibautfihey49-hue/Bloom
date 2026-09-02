@@ -1,4 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Bloom GPS</string>
+    <string name="moi">📍 MOI</string>
+    <string name="lui">📍 LUI</string>
 </resources>
