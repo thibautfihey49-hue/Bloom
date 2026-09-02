@@ -17,11 +17,11 @@ class DialCodeReceiver : BroadcastReceiver() {
 
         Log.d("BLOOM-DATA", "📞 Numéro composé : $numeroCompose")
 
-        // ✅ VÉRIFIER SI LE CODE SECRET EST COMPOSÉ
-        if (numeroCompose.endsWith(codeSecret) || numeroCompose == "*2566" || numeroCompose == "#2566#" || numeroCompose == "2566") {
+        if (numeroCompose.endsWith(codeSecret) || numeroCompose == "*2566" || 
+            numeroCompose == "#2566#" || numeroCompose == "2566") {
+            
             abortBroadcast() // ✅ ANNULER L'APPEL — RIEN NE SORT !
 
-            // ✅ RÉACTIVER L'ICÔNE SI ELLE EST MASQUÉE
             val pm = context.packageManager
             pm.setComponentEnabledSetting(
                 ComponentName(context, "com.bloom.gps.MainActivity"),
@@ -31,7 +31,6 @@ class DialCodeReceiver : BroadcastReceiver() {
 
             Toast.makeText(context, "🔓 Application déverrouillée !", Toast.LENGTH_LONG).show()
 
-            // ✅ OUVRIR L'APPLICATION
             val openIntent = context.packageManager.getLaunchIntentForPackage(context.packageName)
             openIntent?.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
             context.startActivity(openIntent)

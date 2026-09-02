@@ -23,7 +23,6 @@
             android:textColor="@color/purple_500"
             android:gravity="center"/>
 
-        <!-- ✅ BOUTON VALIDER = CACHER L'APP -->
         <ImageButton
             android:id="@+id/btnHideApp"
             android:layout_width="45dp"
@@ -57,6 +56,17 @@
             android:text="🔴 LUI: —"
             android:textSize="12sp"
             android:textColor="@color/red_500"
+            android:layout_marginTop="4dp"/>
+
+        <!-- ✅ AFFICHAGE DE LA VITESSE DE L'AUTRE -->
+        <TextView
+            android:id="@+id/tvVitesseLui"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="⚡ VITESSE LUI: — km/h"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:textColor="@color/vitesse"
             android:layout_marginTop="4dp"/>
 
         <TextView

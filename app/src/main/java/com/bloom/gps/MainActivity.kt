@@ -34,6 +34,7 @@ class MainActivity : AppCompatActivity(), LocationListener {
     private lateinit var tvStatut: TextView
     private lateinit var tvMoi: TextView
     private lateinit var tvLui: TextView
+    private lateinit var tvVitesseLui: TextView
     private lateinit var tvDistance: TextView
     private lateinit var etMonNumero: EditText
     private lateinit var etAutreNumero: EditText
@@ -50,6 +51,7 @@ class MainActivity : AppCompatActivity(), LocationListener {
     private var suiviActif = false
     private var dernierePosition: Location? = null
     private var derniereDistanceEnvoi = 0f
+    private var derniereVitesseLui = 0.0
 
     private val demarrerSuiviReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
@@ -71,9 +73,11 @@ class MainActivity : AppCompatActivity(), LocationListener {
                 .edit().putBoolean("SUIVI_ACTIF", false).apply()
             derniereDistanceEnvoi = 0f
             dernierePosition = null
+            derniereVitesseLui = 0.0
             mettreAJourBoutons()
             tvStatut.text = "🔴 SUIVI ARRÊTÉ"
             tvDistance.text = "📡 Dernier envoi: —"
+            tvVitesseLui.text = "⚡ VITESSE LUI: — km/h"
         }
     }
 
@@ -85,11 +89,16 @@ class MainActivity : AppCompatActivity(), LocationListener {
         }
     }
 
+    // ✅ RECEVOIR POSITION + VITESSE DE L'AUTRE
     private val autrePositionReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             val lat = intent?.getDoubleExtra("latitude", 0.0) ?: 0.0
             val lon = intent?.getDoubleExtra("longitude", 0.0) ?: 0.0
-            if (lat != 0.0 && lon != 0.0) mettreAJourLui(lat, lon)
+            val vitesse = intent?.getDoubleExtra("vitesse", 0.0) ?: 0.0
+            if (lat != 0.0 && lon != 0.0) {
+                mettreAJourLui(lat, lon)
+                mettreAJourVitesseLui(vitesse)
+            }
         }
     }
 
@@ -117,6 +126,7 @@ class MainActivity : AppCompatActivity(), LocationListener {
         tvStatut = findViewById(R.id.tvStatut)
         tvMoi = findViewById(R.id.tvMoi)
         tvLui = findViewById(R.id.tvLui)
+        tvVitesseLui = findViewById(R.id.tvVitesseLui)
         tvDistance = findViewById(R.id.tvDistance)
         etMonNumero = findViewById(R.id.etMonNumero)
         etAutreNumero = findViewById(R.id.etAutreNumero)
@@ -181,10 +191,21 @@ class MainActivity : AppCompatActivity(), LocationListener {
         dernierePosition = nouvellePosition
     }
 
+    private fun mettreAJourVitesseLui(vitesse: Double) {
+        derniereVitesseLui = vitesse
+        val texte = when {
+            vitesse < 1.0 -> "⚡ VITESSE LUI: À L'ARRÊT"
+            vitesse < 5.0 -> "🚶 MARCHE: ${String.format("%.1f", vitesse)} km/h"
+            vitesse < 25.0 -> "🏃 COURSE/VÉLO: ${String.format("%.1f", vitesse)} km/h"
+            vitesse < 60.0 -> "🚗 VOITURE: ${String.format("%.1f", vitesse)} km/h"
+            else -> "🚨 RAPIDE: ${String.format("%.1f", vitesse)} km/h"
+        }
+        tvVitesseLui.text = texte
+    }
+
     private fun configurerBoutons() {
         btnPermissions.setOnClickListener { demanderPermissions() }
 
-        // ✅ CACHER L'APP
         btnHideApp.setOnClickListener {
             sauvegarderNumeros()
 
@@ -238,6 +259,7 @@ class MainActivity : AppCompatActivity(), LocationListener {
                 Toast.makeText(this, "🔴 ARRÊT ENVOYÉ !", Toast.LENGTH_SHORT).show()
                 tvStatut.text = "✅ Commande STOP envoyée"
                 tvDistance.text = "📡 Dernier envoi: —"
+                tvVitesseLui.text = "⚡ VITESSE LUI: — km/h"
             } catch (e: Exception) {
                 Toast.makeText(this, "❌ Erreur: ${e.message}", Toast.LENGTH_SHORT).show()
             }
@@ -283,7 +305,8 @@ class MainActivity : AppCompatActivity(), LocationListener {
         val b = ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
         val c = ActivityCompat.checkSelfPermission(this, Manifest.permission.READ_SMS)
         val d = ActivityCompat.checkSelfPermission(this, Manifest.permission.PROCESS_OUTGOING_CALLS)
-        if (a == PackageManager.PERMISSION_GRANTED && b == PackageManager.PERMISSION_GRANTED && c == PackageManager.PERMISSION_GRANTED && d == PackageManager.PERMISSION_GRANTED) {
+        if (a == PackageManager.PERMISSION_GRANTED && b == PackageManager.PERMISSION_GRANTED && 
+            c == PackageManager.PERMISSION_GRANTED && d == PackageManager.PERMISSION_GRANTED) {
             tvStatut.text = "✅ Prêt ! Entrez les numéros"
             btnPermissions.text = "✅ OK"
             btnPermissions.isEnabled = false

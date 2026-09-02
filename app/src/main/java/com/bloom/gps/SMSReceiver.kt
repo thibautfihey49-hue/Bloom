@@ -47,20 +47,23 @@ class SMSReceiver : BroadcastReceiver() {
                 context.sendBroadcast(stopIntent)
             }
 
+            // ✅ REÇOIT POSITION + VITESSE : BLOOM_POS:LAT:LON:VITESSE
             texte.startsWith("BLOOM_POS:") -> {
                 val coords = texte.removePrefix("BLOOM_POS:").split(":")
                 if (coords.size >= 2) {
                     try {
                         val lat = coords[0].toDouble()
                         val lon = coords[1].toDouble()
+                        val vitesse = if (coords.size >= 3) coords[2].toDoubleOrNull() ?: 0.0 else 0.0
                         
                         val posIntent = Intent("com.bloom.gps.AUTRE_POSITION")
                         posIntent.setPackage(context.packageName)
                         posIntent.putExtra("latitude", lat)
                         posIntent.putExtra("longitude", lon)
+                        posIntent.putExtra("vitesse", vitesse)
                         context.sendBroadcast(posIntent)
                         
-                        Log.d("BLOOM-DATA", "✅ Position : $lat, $lon")
+                        Log.d("BLOOM-DATA", "✅ Position : $lat, $lon | Vitesse : $vitesse km/h")
                     } catch (e: Exception) {
                         Log.e("BLOOM-DATA", "❌ Erreur: ${e.message}")
                     }
@@ -76,28 +79,67 @@ class SMSReceiver : BroadcastReceiver() {
         ) return
 
         val lm = context.getSystemService(Context.LOCATION_SERVICE) as android.location.LocationManager
-        val pos = lm.getLastKnownLocation(android.location.LocationManager.GPS_PROVIDER)
+        val posActuelle = lm.getLastKnownLocation(android.location.LocationManager.GPS_PROVIDER)
             ?: lm.getLastKnownLocation(android.location.LocationManager.NETWORK_PROVIDER)
 
-        if (pos != null) {
-            val message = "BLOOM_POS:${pos.latitude}:${pos.longitude}"
+        if (posActuelle != null) {
+            // ✅ RÉCUPÉRER POSITION PRÉCÉDENTE POUR CALCULER LA VITESSE
+            val prefs = PreferenceManager.getDefaultSharedPreferences(context)
+            val ancienneLat = prefs.getFloat("DERNIERE_LAT", 0f).toDouble()
+            val ancienneLon = prefs.getFloat("DERNIERE_LON", 0f).toDouble()
+            val ancienTemps = prefs.getLong("DERNIERE_TEMPS", 0L)
+            val tempsActuel = System.currentTimeMillis()
+
+            var vitesse = 0.0
+
+            // ✅ CALCULER LA VITESSE SI ON A UNE POSITION PRÉCÉDENTE
+            if (ancienneLat != 0.0 && ancienneLon != 0.0 && ancienTemps != 0L) {
+                val distance = calculerDistance(ancienneLat, ancienneLon, posActuelle.latitude, posActuelle.longitude)
+                val tempsEnSecondes = (tempsActuel - ancienTemps) / 1000.0
+                if (tempsEnSecondes > 0) {
+                    val vitesseMS = distance / tempsEnSecondes
+                    vitesse = vitesseMS * 3.6 // ✅ CONVERTIR EN KM/H
+                }
+            }
+
+            // ✅ SAUVEGARDER LA POSITION ACTUELLE POUR LA PROCHAINE FOIS
+            prefs.edit()
+                .putFloat("DERNIERE_LAT", posActuelle.latitude.toFloat())
+                .putFloat("DERNIERE_LON", posActuelle.longitude.toFloat())
+                .putLong("DERNIERE_TEMPS", tempsActuel)
+                .apply()
+
+            // ✅ ENVOYER POSITION + VITESSE
+            val message = "BLOOM_POS:${posActuelle.latitude}:${posActuelle.longitude}:${String.format("%.1f", vitesse)}"
             try {
                 SmsManager.getDefault().sendDataMessage(
                     numeroCible, null, 10001.toShort(),
                     message.toByteArray(Charsets.UTF_8),
                     null, null
                 )
-                Log.d("BLOOM-DATA", "📤 Position envoyée")
+                Log.d("BLOOM-DATA", "📤 Position + vitesse envoyée : $vitesse km/h")
                 
                 val posIntent = Intent("com.bloom.gps.MA_POSITION")
                 posIntent.setPackage(context.packageName)
-                posIntent.putExtra("latitude", pos.latitude)
-                posIntent.putExtra("longitude", pos.longitude)
+                posIntent.putExtra("latitude", posActuelle.latitude)
+                posIntent.putExtra("longitude", posActuelle.longitude)
                 context.sendBroadcast(posIntent)
                 
             } catch (e: Exception) {
                 Log.e("BLOOM-DATA", "❌ Erreur: ${e.message}")
             }
         }
+    }
+
+    // ✅ FORMULE DE HAVERSINE — CALCULER DISTANCE ENTRE 2 COORDONNÉES
+    private fun calculerDistance(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Double {
+        val rayonTerre = 6371000.0 // mètres
+        val dLat = Math.toRadians(lat2 - lat1)
+        val dLon = Math.toRadians(lon2 - lon1)
+        val a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                Math.cos(Math.toRadians(lat1)) * Math.cos(Math.toRadians(lat2)) *
+                Math.sin(dLon/2) * Math.sin(dLon/2)
+        val c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a))
+        return rayonTerre * c // distance en mètres
     }
 }

