@@ -19,13 +19,10 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
-      - name: 🛠️ Générer Gradle Wrapper 8.2 (COMPATIBLE !)
+      - name: 🔨 Compiler avec NOTRE Gradle 8.2 (PAS CELUI DE GITHUB !)
         run: |
-          gradle wrapper --gradle-version 8.2 --distribution-type all
-          chmod +x gradlew
-
-      - name: 🔨 Compiler l'APK
-        run: ./gradlew assembleDebug --no-daemon
+          chmod +x ./gradlew
+          ./gradlew assembleDebug --no-daemon
 
       - name: 📤 Télécharger l'APK
         uses: actions/upload-artifact@v4
