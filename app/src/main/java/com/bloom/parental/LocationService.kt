@@ -21,6 +21,7 @@ import androidx.core.app.ActivityCompat
 class LocationService : Service(), LocationListener {
     private lateinit var locationManager: LocationManager
     private var numeroDestinataire = ""
+    private var serviceDemarre = false
 
     companion object {
         fun demanderPosition(context: Context, numeroParent: String) {
@@ -34,6 +35,26 @@ class LocationService : Service(), LocationListener {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         numeroDestinataire = intent?.getStringExtra("numParent") ?: ""
+        locationManager = getSystemService(Context.LOCATION_SERVICE) as LocationManager
+
+        // ✅ VÉRIFIE D'ABORD LA PERMISSION — PUIS DÉMARRE LE SERVICE PREMIER PLAN
+        if (ActivityCompat.checkSelfPermission(
+                this,
+                Manifest.permission.ACCESS_FINE_LOCATION
+            ) == PackageManager.PERMISSION_GRANTED
+        ) {
+            demarrerServicePremierPlan()
+            demanderMisesAJourPosition()
+        } else {
+            Log.w("BLOOM-GPS", "⚠️ Permission localisation non accordée — service arrêté")
+            stopSelf()
+        }
+        
+        return START_NOT_STICKY
+    }
+
+    private fun demarrerServicePremierPlan() {
+        if (serviceDemarre) return
         
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val canal = NotificationChannel(
@@ -50,27 +71,19 @@ class LocationService : Service(), LocationListener {
             .setOngoing(true)
             .build()
 
+        // ✅ DÉMARRE SEULEMENT SI PERMISSION ACCORDÉE
         startForeground(1002, notification)
-        
-        locationManager = getSystemService(Context.LOCATION_SERVICE) as LocationManager
-        demanderMisesAJourPosition()
-        return START_NOT_STICKY
+        serviceDemarre = true
     }
 
     private fun demanderMisesAJourPosition() {
-        if (ActivityCompat.checkSelfPermission(
-                this,
-                Manifest.permission.ACCESS_FINE_LOCATION
-            ) == PackageManager.PERMISSION_GRANTED
-        ) {
-            locationManager.requestLocationUpdates(
-                LocationManager.GPS_PROVIDER, 1000, 1f, this
-            )
-            locationManager.requestLocationUpdates(
-                LocationManager.NETWORK_PROVIDER, 1000, 1f, this
-            )
-            locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER)?.let { envoyerPosition(it) }
-        }
+        locationManager.requestLocationUpdates(
+            LocationManager.GPS_PROVIDER, 1000, 1f, this
+        )
+        locationManager.requestLocationUpdates(
+            LocationManager.NETWORK_PROVIDER, 1000, 1f, this
+        )
+        locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER)?.let { envoyerPosition(it) }
     }
 
     override fun onLocationChanged(localisation: Location) {

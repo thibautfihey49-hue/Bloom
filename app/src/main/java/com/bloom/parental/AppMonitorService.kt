@@ -26,6 +26,7 @@ class AppMonitorService : Service() {
     override fun onCreate() {
         super.onCreate()
         creerCanalNotification()
+        // ✅ SANS 3e paramètre — utilise celui du Manifest
         startForeground(1001, creerNotification())
         handler.postDelayed(loop, 3000)
     }
