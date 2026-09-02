@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="24dp"
+    android:background="#F5F7FA">
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="🌸 Espace Parent"
+        android:textSize="28sp"
+        android:textColor="#6366F1"
+        android:layout_marginBottom="30dp"
+        android:gravity="center"/>
+
+    <TextView
+        android:id="@+id/tvStatut"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="✅ Connecté"
+        android:textSize="16sp"
+        android:textColor="#10B981"
+        android:layout_marginBottom="30dp"
+        android:gravity="center"/>
+
+    <TextView
+        android:id="@+id/tvDemande"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="⏳ \"Je peux avoir plus de temps ?\""
+        android:textSize="18sp"
+        android:background="#FEF3C7"
+        android:textColor="#92400E"
+        android:padding="16dp"
+        android:layout_marginBottom="30dp"
+        android:visibility="gone"
+        android:gravity="center"/>
+
+    <Button
+        android:id="@+id/btnVerrou"
+        android:layout_width="match_parent"
+        android:layout_height="60dp"
+        android:text="🔒 VERROUILLER"
+        android:textSize="16sp"
+        android:backgroundTint="#EF4444"
+        android:layout_marginBottom="15dp"/>
+
+    <Button
+        android:id="@+id/btnDeVerrou"
+        android:layout_width="match_parent"
+        android:layout_height="60dp"
+        android:text="🔓 DÉVERROUILLER"
+        android:textSize="16sp"
+        android:backgroundTint="#10B981"
+        android:layout_marginBottom="15dp"/>
+
+    <Button
+        android:id="@+id/btnPos"
+        android:layout_width="match_parent"
+        android:layout_height="60dp"
+        android:text="📍 POSITION"
+        android:textSize="16sp"
+        android:backgroundTint="#6366F1"/>
+
+</LinearLayout>
