@@ -94,7 +94,6 @@
             android:padding="8dp"/>
     </LinearLayout>
 
-    <!-- 🎮 2 BOUTONS SEULEMENT -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"

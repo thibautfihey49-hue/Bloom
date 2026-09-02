@@ -11,7 +11,6 @@ import android.location.Location
 import android.location.LocationListener
 import android.location.LocationManager
 import android.os.Bundle
-import android.provider.Settings
 import android.telephony.SmsManager
 import android.widget.Button
 import android.widget.EditText
@@ -49,7 +48,6 @@ class MainActivity : AppCompatActivity(), LocationListener {
     private var dernierePosition: Location? = null
     private var derniereDistanceEnvoi = 0f
 
-    // 🟢 RECEVEUR — DÉMARRER SUIVI À DISTANCE
     private val demarrerSuiviReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             suiviActif = true
@@ -58,15 +56,11 @@ class MainActivity : AppCompatActivity(), LocationListener {
             derniereDistanceEnvoi = 0f
             dernierePosition = null
             mettreAJourBoutons()
-            // ✅ PAS DE NOTIFICATION VISIBLE — SEUL UN LOG
             tvStatut.text = "🟢 SUIVI ACTIF — Envoi toutes les 10m"
-            
-            // ✅ DÉMARRER LE GPS SI CE N'EST PAS DÉJÀ FAIT
             demarrerGPS()
         }
     }
 
-    // 🔴 RECEVEUR — ARRÊTER SUIVI À DISTANCE
     private val arreterSuiviReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             suiviActif = false
@@ -155,7 +149,6 @@ class MainActivity : AppCompatActivity(), LocationListener {
             ) != PackageManager.PERMISSION_GRANTED
         ) return
         
-        // ✅ DEMARRER LE GPS SANS SERVICE PREMIER PLAN → PAS D'ICÔNE DANS LA BARRE DE STATUT
         locationManager.requestLocationUpdates(
             LocationManager.GPS_PROVIDER, 1000, 1f, this
         )
@@ -167,7 +160,6 @@ class MainActivity : AppCompatActivity(), LocationListener {
     override fun onLocationChanged(nouvellePosition: Location) {
         mettreAJourMoi(nouvellePosition.latitude, nouvellePosition.longitude)
         
-        // 📡 ENVOI AUTOMATIQUE TOUTES LES 10M SI SUIVI ACTIF
         if (suiviActif && dernierePosition != null) {
             val distance = nouvellePosition.distanceTo(dernierePosition!!)
             derniereDistanceEnvoi += distance
@@ -188,7 +180,6 @@ class MainActivity : AppCompatActivity(), LocationListener {
     private fun configurerBoutons() {
         btnPermissions.setOnClickListener { demanderPermissions() }
 
-        // 🟢 BOUTON START — TOUT EN UN CLIC
         btnStart.setOnClickListener {
             val num = etAutreNumero.text.toString().trim()
             if (num.isEmpty()) {
@@ -201,7 +192,7 @@ class MainActivity : AppCompatActivity(), LocationListener {
                 SmsManager.getDefault().sendDataMessage(
                     num, null, 10001.toShort(),
                     "BLOOM_START".toByteArray(Charsets.UTF_8),
-                    null, null  // ⚠️ PAS DE PendingIntent = AUCUNE NOTIFICATION À L'ENVOI
+                    null, null
                 )
                 Toast.makeText(this, "🟢 DÉMARRAGE ENVOYÉ !", Toast.LENGTH_SHORT).show()
                 tvStatut.text = "✅ Commande START envoyée"
@@ -210,7 +201,6 @@ class MainActivity : AppCompatActivity(), LocationListener {
             }
         }
 
-        // 🔴 BOUTON STOP — TOUT ARRÊTER
         btnStop.setOnClickListener {
             val num = etAutreNumero.text.toString().trim()
             if (num.isEmpty()) {
@@ -223,7 +213,7 @@ class MainActivity : AppCompatActivity(), LocationListener {
                 SmsManager.getDefault().sendDataMessage(
                     num, null, 10001.toShort(),
                     "BLOOM_STOP".toByteArray(Charsets.UTF_8),
-                    null, null  // ⚠️ PAS DE PendingIntent = AUCUNE NOTIFICATION
+                    null, null
                 )
                 Toast.makeText(this, "🔴 ARRÊT ENVOYÉ !", Toast.LENGTH_SHORT).show()
                 tvStatut.text = "✅ Commande STOP envoyée"
@@ -243,7 +233,7 @@ class MainActivity : AppCompatActivity(), LocationListener {
             SmsManager.getDefault().sendDataMessage(
                 num, null, 10001.toShort(),
                 message.toByteArray(Charsets.UTF_8),
-                null, null  // ⚠️ PAS DE PendingIntent = RIEN NE S'AFFICHE
+                null, null
             )
             tvDistance.text = "✅ ENVOYÉ ! Déplacement: ~10m"
         } catch (e: Exception) {

