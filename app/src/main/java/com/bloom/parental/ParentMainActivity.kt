@@ -1,159 +1,240 @@
 package com.bloom.parental
 
 import android.Manifest
-import android.content.*
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
 import android.content.pm.PackageManager
+import android.graphics.Color
 import android.os.Bundle
 import android.telephony.SmsManager
-import android.widget.*
+import android.view.View
+import android.widget.Button
+import android.widget.LinearLayout
+import android.widget.ScrollView
+import android.widget.TextView
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
-import androidx.preference.PreferenceManager
+import androidx.core.content.ContextCompat
+import org.osmdroid.api.IMapController
+import org.osmdroid.config.Configuration
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.Marker
+import org.osmdroid.views.overlay.OverlayItem
+import androidx.preference.PreferenceManager
 
 class ParentMainActivity : AppCompatActivity() {
-    private val CODE = "BLOOM49"
-    private lateinit var numEnfant: EditText
+    private lateinit var btnVerrouiller: Button
+    private lateinit var btnDeverrouiller: Button
+    private lateinit var btnPosition: Button
+    private lateinit var tvStatut: TextView
+    private lateinit var tvDemandeTemps: TextView
     private lateinit var mapView: MapView
-    private lateinit var txtPos: TextView
-    private lateinit var txtDemandes: TextView
-    private lateinit var seekTemps: SeekBar
-    private lateinit var txtTemps: TextView
-    private val sms = SmsManager.getDefault()
-    private var numeroEnfant = ""
-
-    private val receiver = object : BroadcastReceiver() {
-        override fun onReceive(c: Context?, i: Intent?) {
-            when (i?.action) {
-                "BLOOM_POSITION" -> {
-                    val coord = i.getStringExtra("coord") ?: return
-                    val de = i.getStringExtra("numEnfant") ?: "??"
-                    val ll = coord.removePrefix("BLOOM_POS:").split(",")
-                    if (ll.size >= 2) runOnUiThread {
-                        val lat = ll[0].toDouble()
-                        val lon = ll[1].toDouble()
-                        txtPos.text = "✅ Position de $de : $lat, $lon"
-                        mapView.controller.setCenter(GeoPoint(lat, lon))
-                        mapView.overlays.clear()
-                        mapView.overlays.add(Marker(mapView).apply {
-                            position = GeoPoint(lat, lon)
-                            title = "📍 Enfant"
-                            setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
-                        })
-                        mapView.invalidate()
-                    }
-                }
-                "BLOOM_DEMANDE_TEMPS" -> runOnUiThread {
-                    val de = i.getStringExtra("numEnfant") ?: "??"
-                    txtDemandes.text = "📩 Demande de temps de $de\n→ Augmente le temps d'écran !"
-                    txtDemandes.setBackgroundColor(0xFFFEF3C7.toInt())
-                }
-                "BLOOM_DEMANDE_INSTALL" -> runOnUiThread {
-                    val de = i.getStringExtra("numEnfant") ?: "??"
-                    val app = i.getStringExtra("nomApp") ?: "??"
-                    txtDemandes.text = "📲 Demande d'installation de $app\nde $de\n→ Réponds en bas !"
-                    txtDemandes.setBackgroundColor(0xFFE0E7FF.toInt())
-                }
+    private var positionActuelle: GeoPoint? = null
+    
+    private val demandeTempsReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            tvDemandeTemps.visibility = View.VISIBLE
+            tvDemandeTemps.text = "⏳ \"Je peux avoir plus de temps ?\""
+        }
+    }
+    
+    private val positionReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            val lat = intent?.getDoubleExtra("latitude", 0.0) ?: 0.0
+            val lon = intent?.getDoubleExtra("longitude", 0.0) ?: 0.0
+            if (lat != 0.0 && lon != 0.0) {
+                mettreAJourPosition(lat, lon)
             }
         }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_parent_main)
-        initUI()
-        initCarte()
-        registerReceiver(receiver, IntentFilter("BLOOM_POSITION"), RECEIVER_NOT_EXPORTED)
-        registerReceiver(receiver, IntentFilter("BLOOM_DEMANDE_TEMPS"), RECEIVER_NOT_EXPORTED)
-        registerReceiver(receiver, IntentFilter("BLOOM_DEMANDE_INSTALL"), RECEIVER_NOT_EXPORTED)
-        ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.SEND_SMS), 101)
+        Configuration.getInstance().load(this, PreferenceManager.getDefaultSharedPreferences(this))
+        
+        // ✅ Layout dynamique moderne
+        val scroll = ScrollView(this)
+        val container = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(48, 48, 48, 48)
+            setBackgroundColor(0xFFF5F7FA.toInt())
+        }
+        
+        // 📌 Titre
+        val titre = TextView(this).apply {
+            text = "🌸 Bloom — Espace Parent"
+            textSize = 28f
+            setTextColor(0xFF6366F1.toInt())
+            setPadding(0, 0, 0, 40)
+        }
+        container.addView(titre)
+        
+        // 📌 Statut
+        tvStatut = TextView(this).apply {
+            text = "✅ Connecté — Surveillance active"
+            textSize = 16f
+            setTextColor(0xFF10B981.toInt())
+            setPadding(0, 0, 0, 30)
+        }
+        container.addView(tvStatut)
+        
+        // 📌 Demande de temps (affichée EN CLAIR)
+        tvDemandeTemps = TextView(this).apply {
+            visibility = View.GONE
+            text = "⏳ \"Je peux avoir plus de temps ?\""
+            textSize = 18f
+            setBackgroundColor(0xFFFEF3C7.toInt())
+            setTextColor(0xFF92400E.toInt())
+            setPadding(24, 16, 24, 16)
+            setTextIsSelectable(true)
+            setPadding(0, 0, 0, 30)
+        }
+        container.addView(tvDemandeTemps)
+        
+        // 📌 Bouton : Verrouiller
+        btnVerrouiller = Button(this).apply {
+            text = "🔒 VERROUILLER L'APPAREIL"
+            textSize = 16f
+            setBackgroundColor(0xFFEF4444.toInt())
+            setTextColor(Color.WHITE)
+            setPadding(48, 24, 48, 24)
+            setOnClickListener { verrouillerAppareil() }
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply { setMargins(0, 0, 0, 24) }
+        }
+        container.addView(btnVerrouiller)
+        
+        // 📌 Bouton : Déverrouiller
+        btnDeverrouiller = Button(this).apply {
+            text = "🔓 DÉVERROUILLER L'APPAREIL"
+            textSize = 16f
+            setBackgroundColor(0xFF10B981.toInt())
+            setTextColor(Color.WHITE)
+            setPadding(48, 24, 48, 24)
+            setOnClickListener { deverrouillerAppareil() }
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply { setMargins(0, 0, 0, 24) }
+        }
+        container.addView(btnDeverrouiller)
+        
+        // 📌 Bouton : Obtenir position
+        btnPosition = Button(this).apply {
+            text = "📍 OBTENIR LA POSITION"
+            textSize = 16f
+            setBackgroundColor(0xFF6366F1.toInt())
+            setTextColor(Color.WHITE)
+            setPadding(48, 24, 48, 24)
+            setOnClickListener { demanderPosition() }
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply { setMargins(0, 0, 0, 30) }
+        }
+        container.addView(btnPosition)
+        
+        // 📌 Carte
+        val carteTitre = TextView(this).apply {
+            text = "🗺️ Position de l'enfant"
+            textSize = 20f
+            setTextColor(0xFF374151.toInt())
+            setPadding(0, 0, 0, 16)
+        }
+        container.addView(carteTitre)
+        
+        mapView = MapView(this).apply {
+            setTileSource(TileSourceFactory.MAPNIK)
+            setMultiTouchControls(true)
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                600
+            )
+            setBackgroundColor(0xFFE5E7EB.toInt())
+        }
+        container.addView(mapView)
+        
+        scroll.addView(container)
+        setContentView(scroll)
+        
+        // 📍 Initialiser la carte
+        val controller: IMapController = mapView.controller
+        controller.setZoom(15.0)
+        controller.setCenter(GeoPoint(47.4784, -0.5632)) // Angers par défaut
+        
+        // 📡 Enregistrer les récepteurs
+        registerReceiver(demandeTempsReceiver, IntentFilter("com.bloom.parental.AFFICHER_DEMANDE_TEMPS"))
+        registerReceiver(positionReceiver, IntentFilter("com.bloom.parental.METTRE_A_JOUR_POSITION"))
+        
+        // 📋 Demander numéro parent si pas encore fait
+        val prefs = PreferenceManager.getDefaultSharedPreferences(this)
+        if (prefs.getString("NUMERO_PARENT", null) == null) {
+            Toast.makeText(this, "⚠️ Définis ton numéro dans les paramètres", Toast.LENGTH_LONG).show()
+        }
     }
-
-    private fun initUI() {
-        numEnfant = findViewById(R.id.edit_num_enfant)
-        txtPos = findViewById(R.id.txt_position)
-        txtDemandes = findViewById(R.id.txt_demandes)
-        seekTemps = findViewById(R.id.seek_temps)
-        txtTemps = findViewById(R.id.txt_temps)
-        mapView = findViewById(R.id.map_view)
-
-        findViewById<Button>(R.id.btn_localiser).setOnClickListener {
-            if (!verifNum()) return@setOnClickListener
-            envoyerSMS("BLOOM_LOC_$CODE")
-            txtPos.text = "📍 Demande envoyée..."
+    
+    private fun verrouillerAppareil() {
+        val prefs = PreferenceManager.getDefaultSharedPreferences(this)
+        val numeroParent = prefs.getString("NUMERO_PARENT", "") ?: ""
+        if (numeroParent.isNotEmpty()) {
+            SmsManager.getDefault().sendTextMessage(numeroParent, null, "VERROUILLER", null, null)
+            Toast.makeText(this, "🔒 Ordre de verrouillage envoyé", Toast.LENGTH_SHORT).show()
         }
-        findViewById<Button>(R.id.btn_pause).setOnClickListener {
-            if (!verifNum()) return@setOnClickListener
-            envoyerSMS("BLOOM_STOP_$CODE")
-            Toast.makeText(this, "⏹️ Accès coupé", Toast.LENGTH_SHORT).show()
-        }
-        findViewById<Button>(R.id.btn_bloquer_apps).setOnClickListener {
-            if (!verifNum()) return@setOnClickListener
-            startActivity(Intent(this, AppBlockerActivity::class.java).putExtra("numEnfant", numeroEnfant))
-        }
-        findViewById<Button>(R.id.btn_usage).setOnClickListener {
-            if (!verifNum()) return@setOnClickListener
-            startActivity(Intent(this, AppUsageActivity::class.java))
-        }
-        findViewById<Button>(R.id.btn_demandes_install).setOnClickListener {
-            if (!verifNum()) return@setOnClickListener
-            startActivity(Intent(this, InstallRequestsActivity::class.java).putExtra("numEnfant", numeroEnfant))
-        }
-        findViewById<Button>(R.id.btn_accepter_install).setOnClickListener {
-            if (!verifNum()) return@setOnClickListener
-            val app = txtDemandes.text.split("\n").getOrNull(1)?.removePrefix("→ ") ?: return@setOnClickListener
-            envoyerSMS("BLOOM_INSTALL_OK:$CODE:$app")
-            Toast.makeText(this, "✅ Installation autorisée", Toast.LENGTH_SHORT).show()
-            txtDemandes.text = "📩 Aucune demande en attente"
-            txtDemandes.setBackgroundColor(0xFFF7FAFC.toInt())
-        }
-        findViewById<Button>(R.id.btn_refuser_install).setOnClickListener {
-            if (!verifNum()) return@setOnClickListener
-            val app = txtDemandes.text.split("\n").getOrNull(1)?.removePrefix("→ ") ?: return@setOnClickListener
-            envoyerSMS("BLOOM_INSTALL_NON:$CODE:$app")
-            Toast.makeText(this, "❌ Installation refusée", Toast.LENGTH_SHORT).show()
-            txtDemandes.text = "📩 Aucune demande en attente"
-            txtDemandes.setBackgroundColor(0xFFF7FAFC.toInt())
-        }
-
-        seekTemps.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
-            override fun onProgressChanged(sb: SeekBar?, p: Int, u: Boolean) {
-                txtTemps.text = if (p == 0) "⏳ Illimité" else if (p == 1) "⏳ 1 heure" else "⏳ $p heures"
-            }
-            override fun onStartTrackingTouch(sb: SeekBar?) {}
-            override fun onStopTrackingTouch(sb: SeekBar?) {
-                val h = sb?.progress ?: 2
-                envoyerSMS("BLOOM_TIME_${CODE}_$h")
-                Toast.makeText(this@ParentMainActivity, "$h heure(s) envoyée(s)", Toast.LENGTH_SHORT).show()
-            }
-        })
+        tvStatut.text = "🔒 Appareil verrouillé"
+        tvStatut.setTextColor(0xFFEF4444.toInt())
     }
-
-    private fun initCarte() {
-        mapView.setTileSource(TileSourceFactory.DEFAULT_TILE_SOURCE)
-        mapView.setMultiTouchControls(true)
-        mapView.controller.setZoom(12.5)
-        mapView.controller.setCenter(GeoPoint(47.4784, -0.5784))
-    }
-
-    private fun verifNum(): Boolean {
-        numeroEnfant = numEnfant.text.toString().trim()
-        if (numeroEnfant.isEmpty()) {
-            Toast.makeText(this, "Saisis le numéro de l'enfant d'abord !", Toast.LENGTH_LONG).show()
-            return false
+    
+    private fun deverrouillerAppareil() {
+        val prefs = PreferenceManager.getDefaultSharedPreferences(this)
+        val numeroParent = prefs.getString("NUMERO_PARENT", "") ?: ""
+        if (numeroParent.isNotEmpty()) {
+            SmsManager.getDefault().sendTextMessage(numeroParent, null, "DEVERROUILLER", null, null)
+            Toast.makeText(this, "🔓 Ordre de déverrouillage envoyé", Toast.LENGTH_SHORT).show()
         }
-        PreferenceManager.getDefaultSharedPreferences(this).edit().putString("NUM_ENFANT", numeroEnfant).apply()
-        return true
+        tvStatut.text = "✅ Appareil déverrouillé — Surveillance active"
+        tvStatut.setTextColor(0xFF10B981.toInt())
     }
-
-    private fun envoyerSMS(texte: String) {
-        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.SEND_SMS)
-            != PackageManager.PERMISSION_GRANTED) return
-        sms.sendTextMessage(numeroEnfant, null, texte, null, null)
+    
+    private fun demanderPosition() {
+        val prefs = PreferenceManager.getDefaultSharedPreferences(this)
+        val numeroParent = prefs.getString("NUMERO_PARENT", "") ?: ""
+        if (numeroParent.isNotEmpty()) {
+            SmsManager.getDefault().sendTextMessage(numeroParent, null, "POSITION", null, null)
+            Toast.makeText(this, "📍 Position demandée...", Toast.LENGTH_SHORT).show()
+        }
     }
-
-    override fun onDestroy() { super.onDestroy(); unregisterReceiver(receiver) }
+    
+    private fun mettreAJourPosition(lat: Double, lon: Double) {
+        positionActuelle = GeoPoint(lat, lon)
+        mapView.overlays.clear()
+        
+        // 📍 Marqueur sur la carte
+        val marqueur = Marker(mapView).apply {
+            position = positionActuelle
+            title = "Position de l'enfant"
+            snippet = "$lat, $lon"
+            setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
+            icon = ContextCompat.getDrawable(this@ParentMainActivity, android.R.drawable.ic_menu_mylocation)
+        }
+        mapView.overlays.add(marqueur)
+        
+        // 🎯 Centrer la carte
+        mapView.controller.setCenter(positionActuelle)
+        mapView.invalidate()
+        
+        Toast.makeText(this, "📍 Position mise à jour !", Toast.LENGTH_SHORT).show()
+    }
+    
+    override fun onDestroy() {
+        super.onDestroy()
+        unregisterReceiver(demandeTempsReceiver)
+        unregisterReceiver(positionReceiver)
+    }
 }

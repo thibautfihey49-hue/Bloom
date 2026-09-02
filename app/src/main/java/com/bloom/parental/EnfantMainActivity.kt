@@ -1,121 +1,106 @@
 package com.bloom.parental
 
+import android.content.BroadcastReceiver
+import android.content.Context
 import android.content.Intent
-import android.content.pm.PackageManager
+import android.content.IntentFilter
 import android.os.Bundle
-import android.os.CountDownTimer
-import android.os.Handler
-import android.os.Looper
-import android.telephony.SmsManager
+import android.view.View
 import android.widget.Button
-import android.widget.EditText
+import android.widget.LinearLayout
+import android.widget.ScrollView
 import android.widget.TextView
-import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.preference.PreferenceManager
 
 class EnfantMainActivity : AppCompatActivity() {
-    private val CODE = "BLOOM49"
-    private lateinit var editNumParent: EditText
-    private lateinit var txtTemps: TextView
-    private lateinit var txtStatut: TextView
+    private lateinit var tvStatut: TextView
+    private lateinit var tvDemandeTemps: TextView
     private lateinit var btnDemanderTemps: Button
-    private lateinit var btnDemanderInstall: Button
-    private var numParent = ""
-    private var compteur: CountDownTimer? = null
+    
+    private val demandeTempsReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            tvDemandeTemps.visibility = View.VISIBLE
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_enfant_main)
-        initUI()
-        chargerNumParent()
-        demarrerServiceSurveillance()
-    }
-
-    private fun initUI() {
-        editNumParent = findViewById(R.id.edit_num_parent)
-        txtTemps = findViewById(R.id.txt_temps_restant)
-        txtStatut = findViewById(R.id.txt_statut)
-        btnDemanderTemps = findViewById(R.id.btn_demander_temps)
-        btnDemanderInstall = findViewById(R.id.btn_demander_install)
-
-        editNumParent.setOnFocusChangeListener { _ , perdu ->
-            if (!perdu) return@setOnFocusChangeListener
-            val n = editNumParent.text.toString().trim()
-            if (n.isNotEmpty()) {
-                numParent = n
-                PreferenceManager.getDefaultSharedPreferences(this).edit().putString("NUM_PARENT", n).apply()
-                btnDemanderTemps.isEnabled = true
-                btnDemanderInstall.isEnabled = true
-                txtStatut.text = "✅ Connecté au parent"
-                Toast.makeText(this, "Numéro parent sauvegardé !", Toast.LENGTH_SHORT).show()
-            }
+        
+        val scroll = ScrollView(this)
+        val container = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(48, 48, 48, 48)
+            setBackgroundColor(0xFFF0FDF4.toInt())
         }
-
-        btnDemanderTemps.setOnClickListener {
-            if (!verifNum()) return@setOnClickListener
-            envoyerSMS("BLOOM_DEMAND_TEMPS:$CODE")
-            Toast.makeText(this, "📤 Demande envoyée !", Toast.LENGTH_SHORT).show()
-            btnDemanderTemps.isEnabled = false
-            Handler(Looper.getMainLooper()).postDelayed({ btnDemanderTemps.isEnabled = true }, 10000)
+        
+        // 📌 Titre
+        val titre = TextView(this).apply {
+            text = "🌸 Bloom — Mon Espace"
+            textSize = 28f
+            setTextColor(0xFF059669.toInt())
+            setPadding(0, 0, 0, 40)
         }
-
-        btnDemanderInstall.setOnClickListener {
-            if (!verifNum()) return@setOnClickListener
-            val app = "NomDeLApp" // À améliorer avec sélecteur d'app
-            envoyerSMS("BLOOM_DEMAND_INSTALL:$CODE:$app")
-            Toast.makeText(this, "📤 Demande d'installation envoyée !", Toast.LENGTH_SHORT).show()
-            btnDemanderInstall.isEnabled = false
-            Handler(Looper.getMainLooper()).postDelayed({ btnDemanderInstall.isEnabled = true }, 10000)
+        container.addView(titre)
+        
+        // 📌 Statut
+        tvStatut = TextView(this).apply {
+            text = "✅ Connecté — Surveillance active"
+            textSize = 16f
+            setTextColor(0xFF10B981.toInt())
+            setPadding(0, 0, 0, 40)
+        }
+        container.addView(tvStatut)
+        
+        // 📌 Demande de temps (affichée EN CLAIR)
+        tvDemandeTemps = TextView(this).apply {
+            visibility = View.GONE
+            text = "⏳ Demande envoyée : \"Je peux avoir plus de temps ?\""
+            textSize = 18f
+            setBackgroundColor(0xFFD1FAE5.toInt())
+            setTextColor(0xFF065F46.toInt())
+            setPadding(24, 16, 24, 16)
+            setPadding(0, 0, 0, 40)
+        }
+        container.addView(tvDemandeTemps)
+        
+        // 📌 Bouton : Demander plus de temps
+        btnDemanderTemps = Button(this).apply {
+            text = "⏳ DEMANDER PLUS DE TEMPS"
+            textSize = 16f
+            setBackgroundColor(0xFF10B981.toInt())
+            setTextColor(android.graphics.Color.WHITE)
+            setPadding(48, 24, 48, 24)
+            setOnClickListener { demanderPlusDeTemps() }
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply { setMargins(0, 0, 0, 24) }
+        }
+        container.addView(btnDemanderTemps)
+        
+        scroll.addView(container)
+        setContentView(scroll)
+        
+        registerReceiver(demandeTempsReceiver, IntentFilter("com.bloom.parental.AFFICHER_DEMANDE_TEMPS"))
+    }
+    
+    private fun demanderPlusDeTemps() {
+        val prefs = PreferenceManager.getDefaultSharedPreferences(this)
+        val numeroParent = prefs.getString("NUMERO_PARENT", "") ?: ""
+        
+        if (numeroParent.isNotEmpty()) {
+            android.telephony.SmsManager.getDefault().sendTextMessage(
+                numeroParent, null, "PLUS DE TEMPS", null, null
+            )
+            tvDemandeTemps.visibility = View.VISIBLE
+        } else {
+            android.widget.Toast.makeText(this, "⚠️ Numéro parent non configuré", android.widget.Toast.LENGTH_SHORT).show()
         }
     }
-
-    private fun chargerNumParent() {
-        numParent = PreferenceManager.getDefaultSharedPreferences(this).getString("NUM_PARENT", "") ?: ""
-        if (numParent.isNotEmpty()) {
-            editNumParent.setText(numParent)
-            btnDemanderTemps.isEnabled = true
-            btnDemanderInstall.isEnabled = true
-        }
-        mettreAJourAffichageTemps()
+    
+    override fun onDestroy() {
+        super.onDestroy()
+        unregisterReceiver(demandeTempsReceiver)
     }
-
-    private fun verifNum(): Boolean {
-        if (numParent.isEmpty()) {
-            Toast.makeText(this, "Saisis d'abord le numéro de ton parent !", Toast.LENGTH_LONG).show()
-            return false
-        }
-        return true
-    }
-
-    private fun mettreAJourAffichageTemps() {
-        val tempsFin = PreferenceManager.getDefaultSharedPreferences(this)
-            .getLong("TEMPS_FIN", Long.MAX_VALUE)
-        val reste = tempsFin - System.currentTimeMillis()
-
-        if (reste <= 0 || reste > 31536000000L) {
-            txtTemps.text = "⏳ Illimité"
-            txtTemps.setTextColor(0xFF38A169.toInt())
-            txtStatut.text = if (numParent.isEmpty()) "📱 Saisis le numéro de ton parent" else "✅ En attente des commandes"
-            return
-        }
-
-        val h = reste / 3600000
-        val m = (reste % 3600000) / 60000
-        txtTemps.text = if (h <= 0) "⏳ $m min restant" else if (m == 0L) "⏳ $h h restant" else "⏳ $h h $m min restant"
-        txtTemps.setTextColor(if (h < 1) 0xFFED8936.toInt() else 0xFF38A169.toInt())
-        txtStatut.text = "✅ Temps d'écran actif"
-    }
-
-    private fun envoyerSMS(texte: String) {
-        if (checkSelfPermission(android.Manifest.permission.SEND_SMS) != PackageManager.PERMISSION_GRANTED) return
-        SmsManager.getDefault().sendTextMessage(numParent, null, texte, null, null)
-    }
-
-    private fun demarrerServiceSurveillance() {
-        startForegroundService(Intent(this, AppMonitorService::class.java))
-    }
-
-    override fun onResume() { super.onResume(); mettreAJourAffichageTemps() }
-    override fun onDestroy() { super.onDestroy(); compteur?.cancel() }
 }
