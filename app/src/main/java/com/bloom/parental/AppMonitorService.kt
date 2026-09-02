@@ -25,23 +25,53 @@ class AppMonitorService : Service() {
 
     override fun onCreate() {
         super.onCreate()
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val ch = NotificationChannel("BLOOM", "Bloom", NotificationManager.IMPORTANCE_LOW)
-            getSystemService(NotificationManager::class.java).createNotificationChannel(ch)
-        }
-        startForeground(1001, Notification.Builder(this, "BLOOM")
-            .setContentTitle("🌸 Bloom actif")
-            .setSmallIcon(android.R.drawable.ic_menu_myplaces)
-            .setOngoing(true).build())
+        creerCanalNotification()
+        demarrerServicePremierPlan()
         handler.postDelayed(loop, 3000)
+    }
+
+    private fun creerCanalNotification() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val canal = NotificationChannel(
+                "BLOOM_MONITOR",
+                "Bloom — Surveillance",
+                NotificationManager.IMPORTANCE_LOW
+            ).apply { setShowBadge(false) }
+            getSystemService(NotificationManager::class.java).createNotificationChannel(canal)
+        }
+    }
+
+    private fun creerNotification(): Notification {
+        return Notification.Builder(this, "BLOOM_MONITOR")
+            .setContentTitle("🌸 Bloom — Surveillance active")
+            .setContentText("Contrôle parental en cours")
+            .setSmallIcon(android.R.drawable.ic_menu_myplaces)
+            .setOngoing(true)
+            .build()
+    }
+
+    private fun demarrerServicePremierPlan() {
+        val notif = creerNotification()
+        when {
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE -> {
+                startForeground(
+                    1001,
+                    notif,
+                    Service.FOREGROUND_SERVICE_TYPE_SPECIAL_USE
+                )
+            }
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.O -> {
+                startForeground(1001, notif)
+            }
+        }
     }
 
     private fun verifierBlocage() {
         val prefs = PreferenceManager.getDefaultSharedPreferences(this)
         val bloquees = prefs.getStringSet("APPS_BLOQUEES", emptySet()) ?: return
         val am = getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
-        am.getRunningTasks(50).forEach { t ->
-            val pkg = t.baseActivity?.packageName ?: return@forEach
+        am.getRunningTasks(50).forEach { tache ->
+            val pkg = tache.baseActivity?.packageName ?: return@forEach
             if (bloquees.contains(pkg)) am.killBackgroundProcesses(pkg)
         }
     }
@@ -49,11 +79,15 @@ class AppMonitorService : Service() {
     private fun enregistrerTemps() {
         val prefs = PreferenceManager.getDefaultSharedPreferences(this)
         val am = getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
-        val top = am.getRunningTasks(1).firstOrNull()?.baseActivity?.packageName ?: return
-        prefs.edit().putLong("TEMPS_APP_$top", prefs.getLong("TEMPS_APP_$top", 0)+15).apply()
+        val topApp = am.getRunningTasks(1).firstOrNull()?.baseActivity?.packageName ?: return
+        val tempsActuel = prefs.getLong("TEMPS_APP_$topApp", 0L)
+        prefs.edit().putLong("TEMPS_APP_$topApp", tempsActuel + 15_000).apply()
     }
 
-    override fun onStartCommand(i: Intent?, f: Int, id: Int): Int = START_STICKY
-    override fun onBind(i: Intent?): IBinder? = null
-    override fun onDestroy() { super.onDestroy(); handler.removeCallbacks(loop) }
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int = START_STICKY
+    override fun onBind(intent: Intent?): IBinder? = null
+    override fun onDestroy() {
+        super.onDestroy()
+        handler.removeCallbacks(loop)
+    }
 }
