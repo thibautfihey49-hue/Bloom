@@ -22,6 +22,7 @@
     
     <!-- Services & Notifications -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.INTERNET" />
@@ -61,11 +62,15 @@
             </intent-filter>
         </receiver>
 
-        <!-- ✅ dataSync = AUCUNE PERMISSION SUPPLÉMENTAIRE REQUISE ! -->
+        <!-- ✅ specialUse = AUCUNE permission runtime demandée à l'utilisateur -->
         <service
             android:name=".AppMonitorService"
             android:exported="false"
-            android:foregroundServiceType="dataSync" />
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="com.bloom.parental.monitoring" />
+        </service>
 
         <service
             android:name=".LocationService"
