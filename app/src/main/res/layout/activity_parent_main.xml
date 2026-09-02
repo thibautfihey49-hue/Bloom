@@ -1,126 +1,74 @@
 <?xml version="1.0" encoding="utf-8"?>
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="match_parent"
-    android:layout_height="match_parent"
+    android:layout_width="match_parent" android:layout_height="match_parent"
     android:background="#F5F7FA">
-
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:padding="16dp">
-
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="🌸 BLOOM — Contrôle Parent"
-            android:textSize="24sp"
-            android:textStyle="bold"
-            android:gravity="center"
-            android:padding="20dp"
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:orientation="vertical" android:padding="16dp">
+        
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:text="🌸 BLOOM — Contrôle Parent" android:textSize="24sp"
+            android:textStyle="bold" android:gravity="center" android:padding="20dp"
             android:textColor="#2D3748"/>
 
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="📱 Numéro de l'enfant :"
-            android:textSize="14sp"
-            android:textColor="#4A5568"/>
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:text="📱 Numéro de l'enfant :" android:textSize="14sp" android:textColor="#4A5568"/>
+        <EditText android:id="@+id/edit_num_enfant" android:layout_width="match_parent"
+            android:layout_height="wrap_content" android:hint="+33 6 12 34 56 78"
+            android:inputType="phone" android:padding="12dp" android:layout_marginBottom="12dp"/>
 
-        <EditText
-            android:id="@+id/edit_num_enfant"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:hint="+33 6 12 34 56 78"
-            android:inputType="phone"
-            android:background="@drawable/edittext_bg"
-            android:padding="12dp"
-            android:layout_marginBottom="16dp"/>
+        <TextView android:id="@+id/txt_demandes" android:layout_width="match_parent"
+            android:layout_height="wrap_content" android:text="📩 Aucune demande en attente"
+            android:textSize="13sp" android:padding="12dp" android:gravity="center"
+            android:layout_marginBottom="12dp" android:background="#F7FAFC" android:textColor="#718096"/>
 
-        <TextView
-            android:id="@+id/txt_demandes"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="📩 Aucune demande pour l'instant"
-            android:textSize="13sp"
-            android:padding="12dp"
-            android:gravity="center"
-            android:layout_marginBottom="12dp"
-            android:background="#F7FAFC"
-            android:textColor="#718096"/>
-
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="⏳ Temps d'écran autorisé :"
-            android:textSize="14sp"
-            android:textColor="#4A5568"/>
-
-        <TextView
-            android:id="@+id/txt_temps"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="⏳ 2 heures"
-            android:textSize="18sp"
-            android:textStyle="bold"
-            android:gravity="center"
-            android:padding="8dp"
-            android:textColor="#2B6CB0"/>
-
-        <SeekBar
-            android:id="@+id/seek_temps"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:max="24"
-            android:progress="2"
-            android:thumbTint="#2B6CB0"
-            android:progressTint="#2B6CB0"
-            android:layout_marginBottom="16dp"/>
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:layout_marginBottom="12dp">
-
-            <Button
-                android:id="@+id/btn_localiser"
-                android:layout_width="0dp"
-                android:layout_height="60dp"
-                android:layout_weight="1"
-                android:text="📍 LOCALISER"
-                android:backgroundTint="#38A169"
-                android:textSize="14sp"
-                android:layout_marginEnd="6dp"/>
-
-            <Button
-                android:id="@+id/btn_pause"
-                android:layout_width="0dp"
-                android:layout_height="60dp"
-                android:layout_weight="1"
-                android:text="⏹️ COUPER"
-                android:backgroundTint="#E53E3E"
-                android:textSize="14sp"
-                android:layout_marginStart="6dp"/>
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:orientation="horizontal" android:layout_marginBottom="8dp">
+            <Button android:id="@+id/btn_accepter_install" android:layout_width="0dp"
+                android:layout_height="45dp" android:layout_weight="1" android:text="✅ Autoriser app"
+                android:backgroundTint="#38A169" android:textSize="12sp" android:layout_marginEnd="4dp"/>
+            <Button android:id="@+id/btn_refuser_install" android:layout_width="0dp"
+                android:layout_height="45dp" android:layout_weight="1" android:text="❌ Refuser"
+                android:backgroundTint="#E53E3E" android:textSize="12sp" android:layout_marginStart="4dp"/>
         </LinearLayout>
 
-        <TextView
-            android:id="@+id/txt_position"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="📍 Aucune position"
-            android:textSize="14sp"
-            android:padding="12dp"
-            android:gravity="center"
-            android:layout_marginTop="16dp"
-            android:background="#E2E8F0"
-            android:textColor="#2D3748"/>
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:text="⏳ Temps d'écran autorisé :" android:textSize="14sp" android:textColor="#4A5568"/>
+        <TextView android:id="@+id/txt_temps" android:layout_width="match_parent"
+            android:layout_height="wrap_content" android:text="⏳ 2 heures" android:textSize="18sp"
+            android:textStyle="bold" android:gravity="center" android:padding="8dp" android:textColor="#2B6CB0"/>
+        <SeekBar android:id="@+id/seek_temps" android:layout_width="match_parent"
+            android:layout_height="wrap_content" android:max="24" android:progress="2"
+            android:thumbTint="#2B6CB0" android:progressTint="#2B6CB0" android:layout_marginBottom="16dp"/>
 
-        <org.osmdroid.views.MapView
-            android:id="@+id/map_view"
-            android:layout_width="match_parent"
-            android:layout_height="400dp"
-            android:layout_marginTop="12dp"/>
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:orientation="horizontal" android:layout_marginBottom="8dp">
+            <Button android:id="@+id/btn_localiser" android:layout_width="0dp"
+                android:layout_height="60dp" android:layout_weight="1" android:text="📍 Localiser"
+                android:backgroundTint="#38A169" android:textSize="13sp" android:layout_marginEnd="4dp"/>
+            <Button android:id="@+id/btn_pause" android:layout_width="0dp"
+                android:layout_height="60dp" android:layout_weight="1" android:text="⏹️ Couper"
+                android:backgroundTint="#E53E3E" android:textSize="13sp" android:layout_marginStart="4dp"/>
+        </LinearLayout>
 
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:orientation="horizontal" android:layout_marginBottom="16dp">
+            <Button android:id="@+id/btn_bloquer_apps" android:layout_width="0dp"
+                android:layout_height="55dp" android:layout_weight="1" android:text="🚫 Apps"
+                android:backgroundTint="#805AD5" android:textSize="12sp" android:layout_marginEnd="4dp"/>
+            <Button android:id="@+id/btn_usage" android:layout_width="0dp"
+                android:layout_height="55dp" android:layout_weight="1" android:text="📊 Usage"
+                android:backgroundTint="#2F855A" android:textSize="12sp" android:layout_marginHorizontal="4dp"/>
+            <Button android:id="@+id/btn_demandes_install" android:layout_width="0dp"
+                android:layout_height="55dp" android:layout_weight="1" android:text="📲 Install"
+                android:backgroundTint="#2B6CB0" android:textSize="12sp" android:layout_marginStart="4dp"/>
+        </LinearLayout>
+
+        <TextView android:id="@+id/txt_position" android:layout_width="match_parent"
+            android:layout_height="wrap_content" android:text="📍 Aucune position"
+            android:textSize="14sp" android:padding="12dp" android:gravity="center"
+            android:layout_marginBottom="12dp" android:background="#E2E8F0" android:textColor="#2D3748"/>
+
+        <org.osmdroid.views.MapView android:id="@+id/map_view" android:layout_width="match_parent"
+            android:layout_height="300dp"/>
     </LinearLayout>
 </ScrollView>

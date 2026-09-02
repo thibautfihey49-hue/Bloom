@@ -2,16 +2,27 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
+    <!-- SMS & Communication -->
     <uses-permission android:name="android.permission.SEND_SMS" />
     <uses-permission android:name="android.permission.RECEIVE_SMS" />
     <uses-permission android:name="android.permission.READ_SMS" />
     <uses-permission android:name="android.permission.BROADCAST_SMS" />
+    
+    <!-- Localisation -->
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    
+    <!-- Surveillance & Blocage Apps -->
+    <uses-permission android:name="android.permission.PACKAGE_USAGE_STATS"
+        tools:ignore="ProtectedPermissions" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <uses-permission android:name="android.permission.KILL_BACKGROUND_PROCESSES" />
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+    <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES" />
+    
+    <!-- Notifications -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
-    <uses-permission android:name="android.permission.WAKE_LOCK" />
-    <uses-permission android:name="android.permission.INTERNET" />
 
     <application
         android:allowBackup="true"
@@ -22,43 +33,34 @@
         android:theme="@style/Theme.AppCompat.Light.NoActionBar"
         tools:targetApi="31">
 
-        <!-- Écran de démarrage → EXPORTÉ = true -->
-        <activity
-            android:name=".SplashActivity"
-            android:exported="true">
+        <!-- Écrans -->
+        <activity android:name=".SplashActivity" android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        <activity android:name=".ParentMainActivity" android:exported="false" />
+        <activity android:name=".EnfantMainActivity" android:exported="false" />
+        <activity android:name=".AppBlockerActivity" android:exported="false" />
+        <activity android:name=".AppUsageActivity" android:exported="false" />
+        <activity android:name=".InstallRequestsActivity" android:exported="false" />
 
-        <!-- Interface Parent → EXPORTÉ = false -->
-        <activity
-            android:name=".ParentMainActivity"
-            android:exported="false" />
-
-        <!-- Interface Enfant → EXPORTÉ = false -->
-        <activity
-            android:name=".EnfantMainActivity"
-            android:exported="false" />
-
-        <!-- 📩 RÉCEPTEUR SMS → EXPORTÉ = true (REQUI pour Android 13+) -->
-        <receiver
-            android:name=".SMSReceiver"
-            android:exported="true"
+        <!-- Récepteurs -->
+        <receiver android:name=".SMSReceiver" android:exported="true"
             android:permission="android.permission.BROADCAST_SMS">
             <intent-filter>
                 <action android:name="android.provider.Telephony.SMS_RECEIVED" />
             </intent-filter>
         </receiver>
+        <receiver android:name=".BootReceiver" android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+            </intent-filter>
+        </receiver>
 
-        <!-- Services → EXPORTÉ = false -->
-        <service
-            android:name=".LocationService"
-            android:exported="false" />
-        <service
-            android:name=".ScreenTimeService"
-            android:exported="false" />
+        <!-- Services -->
+        <service android:name=".AppMonitorService" android:exported="false" />
+        <service android:name=".LocationService" android:exported="false" />
     </application>
-
 </manifest>

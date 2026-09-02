@@ -1,59 +1,43 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:orientation="vertical"
-    android:gravity="center"
-    android:background="#F5F7FA"
-    android:padding="24dp">
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent" android:layout_height="match_parent"
+    android:background="#F5F7FA">
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:orientation="vertical" android:gravity="center" android:padding="24dp">
 
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="🌸 Mon Temps d'Écran"
-        android:textSize="24sp"
-        android:textStyle="bold"
-        android:textColor="#2D3748"
-        android:paddingBottom="40dp"/>
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:text="🌸 Mon Espace" android:textSize="24sp" android:textStyle="bold"
+            android:textColor="#2D3748" android:paddingBottom="24dp"/>
 
-    <TextView
-        android:id="@+id/txt_temps_restant"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="⏳ Chargement..."
-        android:textSize="32sp"
-        android:textStyle="bold"
-        android:padding="30dp"
-        android:background="#FFFFFF"
-        android:textColor="#38A169"
-        android:elevation="4dp"
-        android:layout_marginBottom="24dp"/>
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:text="📱 Numéro de ton parent :" android:textSize="14sp" android:textColor="#4A5568"/>
+        <EditText android:id="@+id/edit_num_parent" android:layout_width="match_parent"
+            android:layout_height="wrap_content" android:hint="+33 6 12 34 56 78"
+            android:inputType="phone" android:padding="12dp" android:layout_marginBottom="20dp"/>
 
-    <TextView
-        android:id="@+id/txt_statut"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="✅ En attente du parent..."
-        android:textSize="14sp"
-        android:textColor="#718096"
-        android:paddingBottom="40dp"/>
+        <TextView android:id="@+id/txt_temps_restant" android:layout_width="wrap_content"
+            android:layout_height="wrap_content" android:text="⏳ Chargement..."
+            android:textSize="32sp" android:textStyle="bold" android:padding="30dp"
+            android:background="#FFFFFF" android:textColor="#38A169" android:elevation="4dp"
+            android:layout_marginBottom="20dp"/>
 
-    <Button
-        android:id="@+id/btn_demander_temps"
-        android:layout_width="match_parent"
-        android:layout_height="70dp"
-        android:text="🙏 Demander plus de temps"
-        android:backgroundTint="#2B6CB0"
-        android:textSize="16sp"
-        android:padding="16dp"/>
+        <TextView android:id="@+id/txt_statut" android:layout_width="wrap_content"
+            android:layout_height="wrap_content" android:text="✅ En attente..."
+            android:textSize="14sp" android:textColor="#718096" android:paddingBottom="24dp"/>
 
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:textSize="12sp"
-        android:textColor="#A0AEC0"
-        android:layout_marginTop="30dp"
-        android:gravity="center"
-        android:text="Cette application ne lit ni n'envoie aucun SMS visible.\nToutes les communications sont invisibles."/>
+        <Button android:id="@+id/btn_demander_temps" android:layout_width="match_parent"
+            android:layout_height="65dp" android:text="🙏 Demander plus de temps"
+            android:backgroundTint="#2B6CB0" android:textSize="16sp" android:padding="16dp"
+            android:enabled="false" android:layout_marginBottom="12dp"/>
 
-</LinearLayout>
+        <Button android:id="@+id/btn_demander_install" android:layout_width="match_parent"
+            android:layout_height="65dp" android:text="📲 Demander une nouvelle application"
+            android:backgroundTint="#805AD5" android:textSize="16sp" android:padding="16dp"
+            android:enabled="false"/>
+
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:textSize="12sp" android:textColor="#A0AEC0" android:layout_marginTop="30dp"
+            android:gravity="center"
+            android:text="Cette application utilise des SMS cachés pour communiquer.\nAucune donnée ne transite par internet."/>
+    </LinearLayout>
+</ScrollView>

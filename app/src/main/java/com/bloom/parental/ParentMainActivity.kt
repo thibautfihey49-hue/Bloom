@@ -1,72 +1,61 @@
 package com.bloom.parental
 
 import android.Manifest
-import android.app.NotificationChannel
-import android.app.NotificationManager
-import android.content.BroadcastReceiver
-import android.content.Context
-import android.content.Intent
-import android.content.IntentFilter
+import android.content.*
 import android.content.pm.PackageManager
-import android.os.Build
 import android.os.Bundle
-import android.provider.Telephony
 import android.telephony.SmsManager
-import android.widget.Button
-import android.widget.EditText
-import android.widget.SeekBar
-import android.widget.TextView
-import android.widget.Toast
+import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
-import androidx.core.app.NotificationCompat
-import org.osmdroid.config.Configuration
+import androidx.preference.PreferenceManager
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.Marker
 
 class ParentMainActivity : AppCompatActivity() {
-    private lateinit var btnLocaliser: Button
-    private lateinit var btnPause: Button
+    private val CODE = "BLOOM49"
+    private lateinit var numEnfant: EditText
+    private lateinit var mapView: MapView
+    private lateinit var txtPos: TextView
+    private lateinit var txtDemandes: TextView
     private lateinit var seekTemps: SeekBar
     private lateinit var txtTemps: TextView
-    private lateinit var txtPosition: TextView
-    private lateinit var txtDemandes: TextView
-    private lateinit var editNumEnfant: EditText
-    private lateinit var mapView: MapView
+    private val sms = SmsManager.getDefault()
+    private var numeroEnfant = ""
 
-    private val CODE_SECRET = "BLOOM49"
-    private var numEnfant = ""
-    private val smsManager = SmsManager.getDefault()
-    private val CANAL_DEMANDE = "demande_temps"
-
-    private val reponseReceiver = object : BroadcastReceiver() {
-        override fun onReceive(context: Context?, intent: Intent?) {
-            if (intent?.action == "android.provider.Telephony.SMS_RECEIVED") {
-                val messages = Telephony.Sms.Intents.getMessagesFromIntent(intent)
-                for (msg in messages) {
-                    val expediteur = msg.originatingAddress ?: ""
-                    val contenu = msg.messageBody.trim()
-
-                    if (contenu.startsWith("BLOOM_POS:")) {
-                        val coords = contenu.removePrefix("BLOOM_POS:").split(",")
-                        if (coords.size >= 2) {
-                            val lat = coords[0].toDoubleOrNull()
-                            val lon = coords[1].toDoubleOrNull()
-                            if (lat != null && lon != null) {
-                                runOnUiThread { afficherPosition(lat, lon) }
-                            }
-                        }
+    private val receiver = object : BroadcastReceiver() {
+        override fun onReceive(c: Context?, i: Intent?) {
+            when (i?.action) {
+                "BLOOM_POSITION" -> {
+                    val coord = i.getStringExtra("coord") ?: return
+                    val de = i.getStringExtra("numEnfant") ?: "??"
+                    val ll = coord.removePrefix("BLOOM_POS:").split(",")
+                    if (ll.size >= 2) runOnUiThread {
+                        val lat = ll[0].toDouble()
+                        val lon = ll[1].toDouble()
+                        txtPos.text = "✅ Position de $de : $lat, $lon"
+                        mapView.controller.setCenter(GeoPoint(lat, lon))
+                        mapView.overlays.clear()
+                        mapView.overlays.add(Marker(mapView).apply {
+                            position = GeoPoint(lat, lon)
+                            title = "📍 Enfant"
+                            setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
+                        })
+                        mapView.invalidate()
                     }
                 }
-            }
-
-            if (intent?.action == "BLOOM_DEMANDE_TEMPS") {
-                val numDemandeur = intent.getStringExtra("numEnfant") ?: "???"
-                runOnUiThread {
-                    afficherDemandeTemps(numDemandeur)
-                    envoyerNotification(numDemandeur)
+                "BLOOM_DEMANDE_TEMPS" -> runOnUiThread {
+                    val de = i.getStringExtra("numEnfant") ?: "??"
+                    txtDemandes.text = "📩 Demande de temps de $de\n→ Augmente le temps d'écran !"
+                    txtDemandes.setBackgroundColor(0xFFFEF3C7.toInt())
+                }
+                "BLOOM_DEMANDE_INSTALL" -> runOnUiThread {
+                    val de = i.getStringExtra("numEnfant") ?: "??"
+                    val app = i.getStringExtra("nomApp") ?: "??"
+                    txtDemandes.text = "📲 Demande d'installation de $app\nde $de\n→ Réponds en bas !"
+                    txtDemandes.setBackgroundColor(0xFFE0E7FF.toInt())
                 }
             }
         }
@@ -75,152 +64,96 @@ class ParentMainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_parent_main)
-
-        Configuration.getInstance().load(this, getSharedPreferences("osm", MODE_PRIVATE))
-
-        creerCanalNotification()
-        referencerUI()
-        configurerCarte()
-        configurerCurseurTemps()
-        configurerBoutons()
-        demanderPermissions()
-
-        registerReceiver(reponseReceiver, IntentFilter("BLOOM_DEMANDE_TEMPS"), RECEIVER_NOT_EXPORTED)
-        registerReceiver(reponseReceiver, IntentFilter("android.provider.Telephony.SMS_RECEIVED"), RECEIVER_NOT_EXPORTED)
+        initUI()
+        initCarte()
+        registerReceiver(receiver, IntentFilter("BLOOM_POSITION"), RECEIVER_NOT_EXPORTED)
+        registerReceiver(receiver, IntentFilter("BLOOM_DEMANDE_TEMPS"), RECEIVER_NOT_EXPORTED)
+        registerReceiver(receiver, IntentFilter("BLOOM_DEMANDE_INSTALL"), RECEIVER_NOT_EXPORTED)
+        ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.SEND_SMS), 101)
     }
 
-    private fun referencerUI() {
-        btnLocaliser = findViewById(R.id.btn_localiser)
-        btnPause = findViewById(R.id.btn_pause)
+    private fun initUI() {
+        numEnfant = findViewById(R.id.edit_num_enfant)
+        txtPos = findViewById(R.id.txt_position)
+        txtDemandes = findViewById(R.id.txt_demandes)
         seekTemps = findViewById(R.id.seek_temps)
         txtTemps = findViewById(R.id.txt_temps)
-        txtPosition = findViewById(R.id.txt_position)
-        txtDemandes = findViewById(R.id.txt_demandes)
-        editNumEnfant = findViewById(R.id.edit_num_enfant)
         mapView = findViewById(R.id.map_view)
+
+        findViewById<Button>(R.id.btn_localiser).setOnClickListener {
+            if (!verifNum()) return@setOnClickListener
+            envoyerSMS("BLOOM_LOC_$CODE")
+            txtPos.text = "📍 Demande envoyée..."
+        }
+        findViewById<Button>(R.id.btn_pause).setOnClickListener {
+            if (!verifNum()) return@setOnClickListener
+            envoyerSMS("BLOOM_STOP_$CODE")
+            Toast.makeText(this, "⏹️ Accès coupé", Toast.LENGTH_SHORT).show()
+        }
+        findViewById<Button>(R.id.btn_bloquer_apps).setOnClickListener {
+            if (!verifNum()) return@setOnClickListener
+            startActivity(Intent(this, AppBlockerActivity::class.java).putExtra("numEnfant", numeroEnfant))
+        }
+        findViewById<Button>(R.id.btn_usage).setOnClickListener {
+            if (!verifNum()) return@setOnClickListener
+            startActivity(Intent(this, AppUsageActivity::class.java))
+        }
+        findViewById<Button>(R.id.btn_demandes_install).setOnClickListener {
+            if (!verifNum()) return@setOnClickListener
+            startActivity(Intent(this, InstallRequestsActivity::class.java).putExtra("numEnfant", numeroEnfant))
+        }
+        findViewById<Button>(R.id.btn_accepter_install).setOnClickListener {
+            if (!verifNum()) return@setOnClickListener
+            val app = txtDemandes.text.split("\n").getOrNull(1)?.removePrefix("→ ") ?: return@setOnClickListener
+            envoyerSMS("BLOOM_INSTALL_OK:$CODE:$app")
+            Toast.makeText(this, "✅ Installation autorisée", Toast.LENGTH_SHORT).show()
+            txtDemandes.text = "📩 Aucune demande en attente"
+            txtDemandes.setBackgroundColor(0xFFF7FAFC.toInt())
+        }
+        findViewById<Button>(R.id.btn_refuser_install).setOnClickListener {
+            if (!verifNum()) return@setOnClickListener
+            val app = txtDemandes.text.split("\n").getOrNull(1)?.removePrefix("→ ") ?: return@setOnClickListener
+            envoyerSMS("BLOOM_INSTALL_NON:$CODE:$app")
+            Toast.makeText(this, "❌ Installation refusée", Toast.LENGTH_SHORT).show()
+            txtDemandes.text = "📩 Aucune demande en attente"
+            txtDemandes.setBackgroundColor(0xFFF7FAFC.toInt())
+        }
+
+        seekTemps.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(sb: SeekBar?, p: Int, u: Boolean) {
+                txtTemps.text = if (p == 0) "⏳ Illimité" else if (p == 1) "⏳ 1 heure" else "⏳ $p heures"
+            }
+            override fun onStartTrackingTouch(sb: SeekBar?) {}
+            override fun onStopTrackingTouch(sb: SeekBar?) {
+                val h = sb?.progress ?: 2
+                envoyerSMS("BLOOM_TIME_${CODE}_$h")
+                Toast.makeText(this@ParentMainActivity, "$h heure(s) envoyée(s)", Toast.LENGTH_SHORT).show()
+            }
+        })
     }
 
-    private fun configurerCarte() {
+    private fun initCarte() {
         mapView.setTileSource(TileSourceFactory.DEFAULT_TILE_SOURCE)
         mapView.setMultiTouchControls(true)
         mapView.controller.setZoom(12.5)
         mapView.controller.setCenter(GeoPoint(47.4784, -0.5784))
     }
 
-    private fun configurerCurseurTemps() {
-        seekTemps.max = 24
-        seekTemps.progress = 2
-        mettreAJourTexteTemps(2)
-
-        seekTemps.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
-            override fun onProgressChanged(sb: SeekBar?, progress: Int, fromUser: Boolean) {
-                mettreAJourTexteTemps(progress)
-            }
-            override fun onStartTrackingTouch(sb: SeekBar?) {}
-            override fun onStopTrackingTouch(sb: SeekBar?) {
-                val heures = sb?.progress ?: 2
-                envoyerCommande("BLOOM_TIME_${CODE_SECRET}_$heures")
-                Toast.makeText(this@ParentMainActivity,
-                    "$heures heure(s) envoyée(s)", Toast.LENGTH_SHORT).show()
-            }
-        })
-    }
-
-    private fun mettreAJourTexteTemps(heures: Int) {
-        txtTemps.text = when {
-            heures == 0 -> "⏳ Illimité"
-            heures == 1 -> "⏳ 1 heure"
-            else -> "⏳ $heures heures"
-        }
-    }
-
-    private fun configurerBoutons() {
-        btnLocaliser.setOnClickListener {
-            if (!validerNumero()) return@setOnClickListener
-            envoyerCommande("BLOOM_LOC_$CODE_SECRET")
-            txtPosition.text = "📍 Demande envoyée..."
-            Toast.makeText(this, "SMS de localisation envoyé", Toast.LENGTH_SHORT).show()
-        }
-
-        btnPause.setOnClickListener {
-            if (!validerNumero()) return@setOnClickListener
-            envoyerCommande("BLOOM_STOP_$CODE_SECRET")
-            Toast.makeText(this, "Accès coupé", Toast.LENGTH_SHORT).show()
-        }
-    }
-
-    private fun validerNumero(): Boolean {
-        numEnfant = editNumEnfant.text.toString().trim()
-        if (numEnfant.isEmpty()) {
-            Toast.makeText(this, "Entrez le numéro de l'enfant", Toast.LENGTH_LONG).show()
+    private fun verifNum(): Boolean {
+        numeroEnfant = numEnfant.text.toString().trim()
+        if (numeroEnfant.isEmpty()) {
+            Toast.makeText(this, "Saisis le numéro de l'enfant d'abord !", Toast.LENGTH_LONG).show()
             return false
         }
+        PreferenceManager.getDefaultSharedPreferences(this).edit().putString("NUM_ENFANT", numeroEnfant).apply()
         return true
     }
 
-    private fun envoyerCommande(commande: String) {
+    private fun envoyerSMS(texte: String) {
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.SEND_SMS)
-            != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(this,
-                arrayOf(Manifest.permission.SEND_SMS, Manifest.permission.RECEIVE_SMS), 101)
-            return
-        }
-        smsManager.sendTextMessage(numEnfant, null, commande, null, null)
+            != PackageManager.PERMISSION_GRANTED) return
+        sms.sendTextMessage(numeroEnfant, null, texte, null, null)
     }
 
-    private fun afficherPosition(lat: Double, lon: Double) {
-        val point = GeoPoint(lat, lon)
-        mapView.controller.setCenter(point)
-        mapView.overlays.clear()
-        val marqueur = Marker(mapView)
-        marqueur.position = point
-        marqueur.title = "📍 Enfant"
-        marqueur.snippet = "%.5f, %.5f".format(lat, lon)
-        marqueur.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
-        mapView.overlays.add(marqueur)
-        mapView.invalidate()
-        txtPosition.text = "✅ Position : %.4f, %.4f".format(lat, lon)
-    }
-
-    private fun afficherDemandeTemps(numero: String) {
-        txtDemandes.text = "📩 Demande de temps reçue de : $numero\n→ Augmente le temps d'écran !"
-        txtDemandes.setBackgroundColor(0xFFFEF3C7.toInt())
-        Toast.makeText(this, "📩 Demande de temps !", Toast.LENGTH_LONG).show()
-    }
-
-    private fun envoyerNotification(numero: String) {
-        val notif = NotificationCompat.Builder(this, CANAL_DEMANDE)
-            .setSmallIcon(android.R.drawable.ic_dialog_info)
-            .setContentTitle("📩 Demande de temps")
-            .setContentText("L'enfant demande plus de temps d'écran ($numero)")
-            .setPriority(NotificationCompat.PRIORITY_HIGH)
-            .setAutoCancel(true)
-            .build()
-
-        val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        manager.notify(1001, notif)
-    }
-
-    private fun creerCanalNotification() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val canal = NotificationChannel(CANAL_DEMANDE, "Demandes de temps",
-                NotificationManager.IMPORTANCE_HIGH)
-            val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-            manager.createNotificationChannel(canal)
-        }
-    }
-
-    private fun demanderPermissions() {
-        ActivityCompat.requestPermissions(this, arrayOf(
-            Manifest.permission.SEND_SMS,
-            Manifest.permission.RECEIVE_SMS,
-            Manifest.permission.ACCESS_FINE_LOCATION,
-            Manifest.permission.POST_NOTIFICATIONS
-        ), 101)
-    }
-
-    override fun onDestroy() {
-        super.onDestroy()
-        unregisterReceiver(reponseReceiver)
-    }
+    override fun onDestroy() { super.onDestroy(); unregisterReceiver(receiver) }
 }
