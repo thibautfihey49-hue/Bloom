@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Bloom</string>
+    <string name="accessibility_desc">Bloque les applications et applique les limites de temps d\\'écran</string>
+</resources>

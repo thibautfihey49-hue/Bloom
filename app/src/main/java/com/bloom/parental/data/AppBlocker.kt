@@ -1,23 +1,17 @@
 package com.bloom.parental.data
+
 import android.content.Context
-import org.json.JSONArray
-data class BlockedApp(val pkg: String, val name: String, val blocked: Boolean)
+data class BlockedApp(val pkg:String, val name:String, val blocked:Boolean)
 object AppBlocker {
-    private fun p(ctx: Context) = ctx.getSharedPreferences("BloomBlock", Context.MODE_PRIVATE)
-    fun setAppBlocked(ctx: Context, pkg: String, name: String, b: Boolean) {
-        val l = getBlockedApps(ctx).filter { it.pkg != pkg } + BlockedApp(pkg, name, b)
-        val a = JSONArray()
-        l.forEach { a.put(org.json.JSONObject().apply {
-            put("pkg", it.pkg); put("name", it.name); put("blocked", it.blocked)
-        })}
-        p(ctx).edit().putString("list", a.toString()).apply()
+    private fun p(c:Context)=c.getSharedPreferences("bloom_block",Context.MODE_PRIVATE)
+    fun isBlocked(c:Context,pkg:String)=p(c).getBoolean("b_$pkg",false)
+    fun setBlocked(c:Context,pkg:String,name:String,v:Boolean){
+        p(c).edit().putBoolean("b_$pkg",v).putString("n_$pkg",name).apply()
     }
-    fun isAppBlocked(ctx: Context, pkg: String): Boolean = getBlockedApps(ctx).find { it.pkg == pkg }?.blocked ?: false
-    fun getBlockedApps(ctx: Context): List<BlockedApp> = try {
-        val a = JSONArray(p(ctx).getString("list", "[]")!!)
-        List(a.length()) { i ->
-            val o = a.getJSONObject(i)
-            BlockedApp(o.getString("pkg"), o.getString("name"), o.getBoolean("blocked"))
+    fun getAll(c:Context):List<BlockedApp>{
+        val a=p(c).all; return a.keys.filter{it.startsWith("b_")}.map{
+            val pkg=it.removePrefix("b_")
+            BlockedApp(pkg,a["n_$pkg"]?.toString()?:"?",a[it] as? Boolean?:false)
         }
-    } catch(e: Exception) { emptyList() }
+    }
 }
