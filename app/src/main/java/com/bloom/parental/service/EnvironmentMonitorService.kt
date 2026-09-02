@@ -138,7 +138,7 @@ class EnvironmentMonitorService : Service() {
     private fun stopAudioMonitoring() {
         isRecording = false
         audioRecord?.apply {
-            if (state == AudioRecord.STATE_INITIALIZED && recordingState == AudioRecord.RECORDING_STATE_RECORDING) {
+            if (state == AudioRecord.STATE_INITIALIZED && recordingState == AudioRecord.RECORDSTATE_RECORDING) {
                 stop()
             }
             release()
