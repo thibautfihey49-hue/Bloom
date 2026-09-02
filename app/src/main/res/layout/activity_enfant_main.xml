@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:gravity="center"
+    android:background="#F5F7FA"
+    android:padding="24dp">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="🌸 Mon Temps d'Écran"
+        android:textSize="24sp"
+        android:textStyle="bold"
+        android:textColor="#2D3748"
+        android:paddingBottom="40dp"/>
+
+    <TextView
+        android:id="@+id/txt_temps_restant"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="⏳ Chargement..."
+        android:textSize="32sp"
+        android:textStyle="bold"
+        android:padding="30dp"
+        android:background="#FFFFFF"
+        android:textColor="#38A169"
+        android:elevation="4dp"
+        android:layout_marginBottom="24dp"/>
+
+    <TextView
+        android:id="@+id/txt_statut"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="✅ En attente du parent..."
+        android:textSize="14sp"
+        android:textColor="#718096"
+        android:paddingBottom="40dp"/>
+
+    <Button
+        android:id="@+id/btn_demander_temps"
+        android:layout_width="match_parent"
+        android:layout_height="70dp"
+        android:text="🙏 Demander plus de temps"
+        android:backgroundTint="#2B6CB0"
+        android:textSize="16sp"
+        android:padding="16dp"/>
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textSize="12sp"
+        android:textColor="#A0AEC0"
+        android:layout_marginTop="30dp"
+        android:gravity="center"
+        android:text="Cette application ne lit ni n'envoie aucun SMS visible.\nToutes les communications sont invisibles."/>
+
+</LinearLayout>
