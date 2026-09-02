@@ -8,6 +8,7 @@ import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.graphics.Color
 import android.os.Bundle
+import android.telephony.SmsManager
 import android.widget.Button
 import android.widget.EditText
 import android.widget.TextView
@@ -30,13 +31,15 @@ class MainActivity : AppCompatActivity() {
     private lateinit var etMonNumero: EditText
     private lateinit var etAutreNumero: EditText
     private lateinit var btnPermissions: Button
-    private lateinit var btnEnvoyer: Button
-    private lateinit var btnRecevoir: Button
+    private lateinit var btnDemander: Button
+    private lateinit var btnRepondre: Button
+    private lateinit var btnSuivre: Button
     
     private var marqueurMoi: Marker? = null
     private var marqueurLui: Marker? = null
     
     private val PERMISSIONS = 1001
+    private var reponseAutoActivee = false
 
     private val maPositionReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
@@ -79,14 +82,17 @@ class MainActivity : AppCompatActivity() {
         etMonNumero = findViewById(R.id.etMonNumero)
         etAutreNumero = findViewById(R.id.etAutreNumero)
         btnPermissions = findViewById(R.id.btnPermissions)
-        btnEnvoyer = findViewById(R.id.btnEnvoyer)
-        btnRecevoir = findViewById(R.id.btnRecevoir)
+        btnDemander = findViewById(R.id.btnDemander)
+        btnRepondre = findViewById(R.id.btnRepondre)
+        btnSuivre = findViewById(R.id.btnSuivre)
     }
 
     private fun chargerNumeros() {
         val prefs = PreferenceManager.getDefaultSharedPreferences(this)
         etMonNumero.setText(prefs.getString("MON_NUMERO", ""))
         etAutreNumero.setText(prefs.getString("NUMERO_AUTRE", ""))
+        reponseAutoActivee = prefs.getBoolean("REPONSE_AUTO", false)
+        mettreAJourBoutonSuivre()
     }
 
     private fun configurerCarte() {
@@ -100,7 +106,27 @@ class MainActivity : AppCompatActivity() {
     private fun configurerBoutons() {
         btnPermissions.setOnClickListener { demanderPermissions() }
         
-        btnEnvoyer.setOnClickListener {
+        // 📥 DEMANDER SA POSITION — ENVOIE "DEMANDE:" À LUI
+        btnDemander.setOnClickListener {
+            val num = etAutreNumero.text.toString().trim()
+            if (num.isEmpty()) {
+                Toast.makeText(this, "⚠️ Entre d'abord le numéro de l'autre !", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+            PreferenceManager.getDefaultSharedPreferences(this)
+                .edit().putString("NUMERO_AUTRE", num).apply()
+            
+            try {
+                SmsManager.getDefault().sendTextMessage(num, null, "DEMANDE:", null, null)
+                Toast.makeText(this, "📥 DEMANDE ENVOYÉE ! Attends sa position...", Toast.LENGTH_SHORT).show()
+                tvStatut.text = "⏳ Demande envoyée — en attente de sa position..."
+            } catch (e: Exception) {
+                Toast.makeText(this, "❌ Erreur: ${e.message}", Toast.LENGTH_SHORT).show()
+            }
+        }
+
+        // 📤 RÉPONDRE — ENVOIE MA POSITION UNE FOIS
+        btnRepondre.setOnClickListener {
             val num = etAutreNumero.text.toString().trim()
             if (num.isEmpty()) {
                 Toast.makeText(this, "⚠️ Entre d'abord le numéro de l'autre !", Toast.LENGTH_SHORT).show()
@@ -110,16 +136,16 @@ class MainActivity : AppCompatActivity() {
                 .edit().putString("NUMERO_AUTRE", num).apply()
             
             val intent = Intent(this, LocationService::class.java).apply {
-                action = LocationService.ACTION_DEMARRER
+                action = LocationService.ACTION_ENVOYER_UNE_FOIS
+                putExtra(LocationService.EXTRA_NUMERO_CIBLE, num)
             }
             startForegroundService(intent)
-            Toast.makeText(this, "📤 ENVOI INVISIBLE DÉMARRÉ !", Toast.LENGTH_SHORT).show()
-            btnEnvoyer.text = "⏹️ Arrêter"
-            btnEnvoyer.setBackgroundColor(Color.parseColor("#F59E0B"))
-            btnEnvoyer.setOnClickListener { arreterEnvoi() }
+            Toast.makeText(this, "📤 POSITION ENVOYÉE !", Toast.LENGTH_SHORT).show()
+            tvStatut.text = "✅ Position envoyée à l'autre"
         }
 
-        btnRecevoir.setOnClickListener {
+        // 🔄 RÉPONSE AUTOMATIQUE — IL DEMANDE → TU RÉPONDS TOUT SEUL
+        btnSuivre.setOnClickListener {
             val num = etAutreNumero.text.toString().trim()
             if (num.isEmpty()) {
                 Toast.makeText(this, "⚠️ Entre d'abord le numéro de l'autre !", Toast.LENGTH_SHORT).show()
@@ -127,34 +153,30 @@ class MainActivity : AppCompatActivity() {
             }
             PreferenceManager.getDefaultSharedPreferences(this)
                 .edit().putString("NUMERO_AUTRE", num).apply()
-            Toast.makeText(this, "📥 EN ATTENTE DE SA POSITION...", Toast.LENGTH_SHORT).show()
-            tvStatut.text = "⏳ En attente de position de l'autre..."
+            
+            reponseAutoActivee = !reponseAutoActivee
+            PreferenceManager.getDefaultSharedPreferences(this)
+                .edit().putBoolean("REPONSE_AUTO", reponseAutoActivee).apply()
+            
+            mettreAJourBoutonSuivre()
+            
+            if (reponseAutoActivee) {
+                Toast.makeText(this, "🔄 RÉPONSE AUTOMATIQUE ACTIVÉE ! Il demande → tu réponds TOUT SEUL", Toast.LENGTH_LONG).show()
+                tvStatut.text = "✅ Réponse auto ACTIVE — il demande, tu envoies"
+            } else {
+                Toast.makeText(this, "🛑 Réponse automatique désactivée", Toast.LENGTH_SHORT).show()
+                tvStatut.text = "⏳ Réponse auto désactivée"
+            }
         }
     }
 
-    private fun arreterEnvoi() {
-        val intent = Intent(this, LocationService::class.java).apply {
-            action = LocationService.ACTION_ARRETER
-        }
-        startService(intent)
-        Toast.makeText(this, "🛑 ENVOI ARRÊTÉ", Toast.LENGTH_SHORT).show()
-        btnEnvoyer.text = "📤 M'envoyer"
-        btnEnvoyer.setBackgroundColor(Color.parseColor("#2563EB"))
-        btnEnvoyer.setOnClickListener { 
-            val num = etAutreNumero.text.toString().trim()
-            if (num.isEmpty()) {
-                Toast.makeText(this, "⚠️ Entre d'abord le numéro de l'autre !", Toast.LENGTH_SHORT).show()
-                return@setOnClickListener
-            }
-            PreferenceManager.getDefaultSharedPreferences(this)
-                .edit().putString("NUMERO_AUTRE", num).apply()
-            val i = Intent(this, LocationService::class.java).apply {
-                action = LocationService.ACTION_DEMARRER
-            }
-            startForegroundService(i)
-            Toast.makeText(this, "📤 ENVOI INVISIBLE DÉMARRÉ !", Toast.LENGTH_SHORT).show()
-            btnEnvoyer.text = "⏹️ Arrêter"
-            btnEnvoyer.setBackgroundColor(Color.parseColor("#F59E0B"))
+    private fun mettreAJourBoutonSuivre() {
+        if (reponseAutoActivee) {
+            btnSuivre.text = "🔄 ACTIF"
+            btnSuivre.setBackgroundColor(Color.parseColor("#10B981"))
+        } else {
+            btnSuivre.text = "🔄 Réponse auto"
+            btnSuivre.setBackgroundColor(Color.parseColor("#F59E0B"))
         }
     }
 
