@@ -23,7 +23,7 @@ class SMSReceiver : BroadcastReceiver() {
         Log.d("BLOOM-DATA", "📩 Reçu de $numeroExpediteur : $texte")
 
         val prefs = PreferenceManager.getDefaultSharedPreferences(context)
-        val reponseAutoActivee = prefs.getBoolean("REPONSE_AUTO", true) // ✅ ACTIVÉ PAR DÉFAUT
+        val reponseAutoActivee = prefs.getBoolean("REPONSE_AUTO", true)
 
         when {
             texte == "BLOOM_START" && reponseAutoActivee -> {

