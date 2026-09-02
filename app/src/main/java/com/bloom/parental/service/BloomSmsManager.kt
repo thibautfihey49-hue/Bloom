@@ -2,56 +2,56 @@ package com.bloom.parental.service
 
 import android.content.Context
 import android.telephony.SmsManager
+import android.widget.Toast
 import com.bloom.parental.data.Prefs
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
 import org.json.JSONObject
 
 object BloomSmsManager {
-    private const val PREFIX = "🌸BLOOM|"
-    private val sms = SmsManager.getDefault()
-    private val _cmd = MutableStateFlow<Pair<String, JSONObject>?>(null)
-    val cmd: StateFlow<Pair<String, JSONObject>?> = _cmd
+    private fun getPhone(ctx: Context): String? = Prefs.otherPhone.ifEmpty { null }
 
-    fun sendData(ctx: Context, type: String, payload: JSONObject): Boolean {
-        val dest = Prefs.getOtherPhone(ctx) ?: return false
-        return try {
-            val msg = "$PREFIX$type|$payload"
-            if (msg.length <= 160) {
-                sms.sendTextMessage(dest, null, msg, null, null)
-            } else {
-                val parts = sms.divideMessage(msg)
-                sms.sendMultipartTextMessage(dest, null, parts, null, null)
-            }
-            true
+    fun sendCommand(ctx: Context, cmd: String, value: String) {
+        val phone = getPhone(ctx) ?: return
+        try {
+            val msg = "🌸BLOOM|CMD|{\"c\":\"$cmd\",\"v\":\"$value\"}"
+            SmsManager.getDefault().sendTextMessage(phone, null, msg, null, null)
         } catch (e: Exception) {
-            false
+            Toast.makeText(ctx, "❌ SMS non envoyé", Toast.LENGTH_SHORT).show()
         }
     }
 
-    fun sendUsage(ctx: Context, usage: Int, limit: Int) {
-        sendData(ctx, "USAGE", JSONObject().put("u", usage).put("l", limit))
+    fun sendUsage(ctx: Context, used: Int, limit: Int) {
+        val phone = getPhone(ctx) ?: return
+        try {
+            val json = JSONObject().put("used", used).put("limit", limit)
+            val msg = "🌸BLOOM|USAGE|$json"
+            SmsManager.getDefault().sendTextMessage(phone, null, msg, null, null)
+        } catch (e: Exception) {}
     }
 
-    fun sendLocation(ctx: Context, lat: Double, lng: Double, batt: Int) {
-        sendData(ctx, "LOC", JSONObject().put("la", lat).put("ln", lng).put("b", batt))
+    fun sendLocation(ctx: Context, lat: Double, lng: Double, acc: Int) {
+        val phone = getPhone(ctx) ?: return
+        try {
+            val json = JSONObject().put("lat", lat).put("lng", lng).put("acc", acc)
+            val msg = "🌸BLOOM|LOC|$json"
+            SmsManager.getDefault().sendTextMessage(phone, null, msg, null, null)
+        } catch (e: Exception) {}
     }
 
-    fun sendCommand(ctx: Context, cmd: String, value: String = "") {
-        sendData(ctx, "CMD", JSONObject().put("c", cmd).put("v", value))
+    fun sendDb(ctx: Context, db: Int) {
+        val phone = getPhone(ctx) ?: return
+        try {
+            val json = JSONObject().put("db", db)
+            val msg = "🌸BLOOM|DB|$json"
+            SmsManager.getDefault().sendTextMessage(phone, null, msg, null, null)
+        } catch (e: Exception) {}
     }
 
-    fun processMessage(sender: String, body: String): Boolean {
-        if (!body.startsWith(PREFIX)) return false
-        val content = body.removePrefix(PREFIX)
-        val parts = content.split("|", limit = 2)
-        if (parts.size < 2) return false
-        val payload = try {
-            JSONObject(parts[1])
-        } catch (e: Exception) {
-            JSONObject()
-        }
-        _cmd.value = Pair(parts[0], payload)
-        return true
+    fun sendNewApp(ctx: Context, pkg: String, name: String, desc: String) {
+        val phone = getPhone(ctx) ?: return
+        try {
+            val json = JSONObject().put("pkg", pkg).put("name", name).put("description", desc)
+            val msg = "🌸BLOOM|NEWAPP|$json"
+            SmsManager.getDefault().sendTextMessage(phone, null, msg, null, null)
+        } catch (e: Exception) {}
     }
 }

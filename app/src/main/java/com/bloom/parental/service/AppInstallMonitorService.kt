@@ -38,15 +38,14 @@ class AppInstallMonitorService : Service() {
     override fun onCreate() {
         super.onCreate()
         createNotificationChannel()
-        startForeground(2, createNotification())
-        scanPackages()
-        startMonitoring()
+        try {
+            startForeground(2, createNotification())
+            scanPackages()
+            startMonitoring()
+        } catch (e: Exception) { e.printStackTrace() }
     }
 
-    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        return START_STICKY
-    }
-
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int = START_STICKY
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onDestroy() {
@@ -56,17 +55,12 @@ class AppInstallMonitorService : Service() {
 
     private fun createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channel = NotificationChannel(
-                CHANNEL_ID,
-                "Surveillance des installations",
-                NotificationManager.IMPORTANCE_MIN
-            ).apply {
-                description = "Fonctionnement en arrière-plan"
-                setShowBadge(false)
-                enableVibration(false)
-                setSound(null, null)
-            }
-            getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
+            getSystemService(NotificationManager::class.java).createNotificationChannel(
+                NotificationChannel(CHANNEL_ID, "Surveillance des installations", NotificationManager.IMPORTANCE_LOW).apply {
+                    description = "Fonctionnement en arrière-plan"
+                    setShowBadge(false); enableVibration(false); setSound(null, null)
+                }
+            )
         }
     }
 
@@ -76,18 +70,16 @@ class AppInstallMonitorService : Service() {
                 .setContentTitle("Bloom")
                 .setContentText("Surveillance des applications active")
                 .setSmallIcon(android.R.drawable.ic_menu_info_details)
-                .setPriority(Notification.PRIORITY_MIN)
-                .setOngoing(true)
-                .build()
+                .setPriority(Notification.PRIORITY_LOW)
+                .setOngoing(true).build()
         } else {
             @Suppress("DEPRECATION")
             Notification.Builder(this)
                 .setContentTitle("Bloom")
                 .setContentText("Surveillance des applications active")
                 .setSmallIcon(android.R.drawable.ic_menu_info_details)
-                .setPriority(Notification.PRIORITY_MIN)
-                .setOngoing(true)
-                .build()
+                .setPriority(Notification.PRIORITY_LOW)
+                .setOngoing(true).build()
         }
     }
 
@@ -117,8 +109,7 @@ class AppInstallMonitorService : Service() {
                 val name = info.loadLabel(pm).toString()
                 val desc = getAppDescription(pm, pkg, info)
                 Prefs.addPendingApp(pkg, name, desc)
-                val msg = JSONObject().put("pkg", pkg).put("name", name).put("description", desc)
-                BloomSmsManager.sendCommand(this, "newapp", msg.toString())
+                BloomSmsManager.sendNewApp(this, pkg, name, desc)
             } catch (e: Exception) { }
         }
         lastPackages = currentPackages.toMutableSet()

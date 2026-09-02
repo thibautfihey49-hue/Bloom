@@ -39,7 +39,28 @@ class SmsReceiver : BroadcastReceiver() {
                         Prefs.removePendingApp(it.optString("pkg"))
                         Toast.makeText(ctx, if (it.optBoolean("approved")) "✅ Autorisé" else "🚫 Refusé", Toast.LENGTH_SHORT).show()
                     }
+                    "getloc" -> LocationMonitorService.start(ctx)
+                    "getdb" -> EnvironmentMonitorService.start(ctx)
                 }
+            }
+            "LOC" -> {
+                val json = JSONObject(parts[2])
+                Prefs.lastLat = json.optDouble("lat", 0.0)
+                Prefs.lastLng = json.optDouble("lng", 0.0)
+                Prefs.lastAcc = json.optInt("acc", 0)
+            }
+            "DB" -> {
+                val json = JSONObject(parts[2])
+                Prefs.lastDb = json.optInt("db", 0)
+            }
+            "USAGE" -> {
+                val json = JSONObject(parts[2])
+                Prefs.remoteUsage = json.optInt("used", 0)
+                Prefs.remoteLimit = json.optInt("limit", 0)
+            }
+            "NEWAPP" -> {
+                val json = JSONObject(parts[2])
+                Prefs.addPendingApp(json.optString("pkg"), json.optString("name"), json.optString("description"))
             }
         }
     }

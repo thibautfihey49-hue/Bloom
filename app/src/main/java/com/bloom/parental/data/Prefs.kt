@@ -19,8 +19,6 @@ object Prefs {
         get() = prefs.getString("other_phone", "") ?: ""
         set(value) = prefs.edit().putString("other_phone", value).apply()
 
-    fun getOtherPhone(ctx: Context): String? = otherPhone.ifEmpty { null }
-
     var dailyLimit: Int
         get() = prefs.getInt("daily_limit", 240)
         set(value) = prefs.edit().putInt("daily_limit", value).apply()
@@ -32,6 +30,30 @@ object Prefs {
     var pauseEndTime: Long
         get() = prefs.getLong("pause_end", 0L)
         set(value) = prefs.edit().putLong("pause_end", value).apply()
+
+    var lastLat: Double
+        get() = prefs.getFloat("last_lat", 0f).toDouble()
+        set(v) = prefs.edit().putFloat("last_lat", v.toFloat()).apply()
+
+    var lastLng: Double
+        get() = prefs.getFloat("last_lng", 0f).toDouble()
+        set(v) = prefs.edit().putFloat("last_lng", v.toFloat()).apply()
+
+    var lastAcc: Int
+        get() = prefs.getInt("last_acc", 0)
+        set(v) = prefs.edit().putInt("last_acc", v).apply()
+
+    var lastDb: Int
+        get() = prefs.getInt("last_db", 0)
+        set(v) = prefs.edit().putInt("last_db", v).apply()
+
+    var remoteUsage: Int
+        get() = prefs.getInt("remote_used", 0)
+        set(v) = prefs.edit().putInt("remote_used", v).apply()
+
+    var remoteLimit: Int
+        get() = prefs.getInt("remote_limit", 240)
+        set(v) = prefs.edit().putInt("remote_limit", v).apply()
 
     private const val APP_LIMITS = "app_limits"
     private const val APP_BLOCKED = "app_blocked"

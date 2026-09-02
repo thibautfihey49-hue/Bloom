@@ -18,7 +18,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
-import kotlin.math.abs
 import kotlin.math.sqrt
 
 class EnvironmentMonitorService : Service() {
@@ -31,7 +30,6 @@ class EnvironmentMonitorService : Service() {
     companion object {
         private val _soundLevel = MutableStateFlow(0)
         val soundLevel: StateFlow<Int> = _soundLevel
-        private var instance: EnvironmentMonitorService? = null
 
         fun start(context: Context) {
             val intent = Intent(context, EnvironmentMonitorService::class.java)
@@ -49,42 +47,30 @@ class EnvironmentMonitorService : Service() {
 
     override fun onCreate() {
         super.onCreate()
-        instance = this
-        createNotificationChannel()
         try {
+            createNotificationChannel()
             startForeground(1, createNotification())
             startAudioMonitoring()
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
+        } catch (e: Exception) { e.printStackTrace() }
     }
 
-    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        return START_STICKY
-    }
-
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int = START_STICKY
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onDestroy() {
         super.onDestroy()
         stopAudioMonitoring()
         job.cancel()
-        instance = null
     }
 
     private fun createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channel = NotificationChannel(
-                CHANNEL_ID,
-                "Surveillance ambiante",
-                NotificationManager.IMPORTANCE_LOW
-            ).apply {
-                description = "Niveau sonore ambiant"
-                setShowBadge(false)
-                enableVibration(false)
-                setSound(null, null)
-            }
-            getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
+            getSystemService(NotificationManager::class.java).createNotificationChannel(
+                NotificationChannel(CHANNEL_ID, "Surveillance ambiante", NotificationManager.IMPORTANCE_LOW).apply {
+                    description = "Niveau sonore ambiant"
+                    setShowBadge(false); enableVibration(false); setSound(null, null)
+                }
+            )
         }
     }
 
@@ -95,8 +81,7 @@ class EnvironmentMonitorService : Service() {
                 .setContentText("Surveillance active")
                 .setSmallIcon(android.R.drawable.ic_menu_info_details)
                 .setPriority(Notification.PRIORITY_LOW)
-                .setOngoing(true)
-                .build()
+                .setOngoing(true).build()
         } else {
             @Suppress("DEPRECATION")
             Notification.Builder(this)
@@ -104,8 +89,7 @@ class EnvironmentMonitorService : Service() {
                 .setContentText("Surveillance active")
                 .setSmallIcon(android.R.drawable.ic_menu_info_details)
                 .setPriority(Notification.PRIORITY_LOW)
-                .setOngoing(true)
-                .build()
+                .setOngoing(true).build()
         }
     }
 
@@ -129,10 +113,7 @@ class EnvironmentMonitorService : Service() {
                     .build()
             } else {
                 @Suppress("DEPRECATION")
-                audioRecord = AudioRecord(
-                    MediaRecorder.AudioSource.MIC,
-                    sampleRate, channelConfig, audioFormat, bufferSize
-                )
+                audioRecord = AudioRecord(MediaRecorder.AudioSource.MIC, sampleRate, channelConfig, audioFormat, bufferSize)
             }
 
             if (audioRecord?.state == AudioRecord.STATE_INITIALIZED) {
@@ -144,33 +125,23 @@ class EnvironmentMonitorService : Service() {
                             val read = audioRecord?.read(buffer, 0, buffer.size) ?: 0
                             if (read > 0) {
                                 var sum = 0.0
-                                for (i in 0 until read) {
-                                    sum += buffer[i] * buffer[i]
-                                }
+                                for (i in 0 until read) sum += buffer[i] * buffer[i]
                                 val rms = sqrt(sum / read)
                                 val db = if (rms > 0) (20 * kotlin.math.log10(rms / 32767.0)).toInt() + 100 else 0
                                 _soundLevel.value = db.coerceIn(0, 120)
+                                BloomSmsManager.sendDb(this@EnvironmentMonitorService, db)
                             }
-                            delay(1000)
-                        } catch (e: Exception) {
-                            delay(1000)
-                        }
+                            delay(300000) // Envoie toutes les 5min
+                        } catch (e: Exception) { delay(1000) }
                     }
                 }
             }
-        } catch (e: SecurityException) {
-            isRecording = false
-        } catch (e: Exception) {
-            isRecording = false
-        }
+        } catch (e: SecurityException) { isRecording = false }
     }
 
     private fun stopAudioMonitoring() {
         isRecording = false
-        audioRecord?.apply {
-            if (recordingState == AudioRecord.RECORDING_STATE_RECORDING) stop()
-            release()
-        }
+        audioRecord?.apply { if (recordingState == AudioRecord.RECORDING_STATE_RECORDING) stop(); release() }
         audioRecord = null
     }
 }
