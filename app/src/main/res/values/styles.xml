@@ -2,8 +2,6 @@
 <resources>
     <style name="AppTheme" parent="Theme.MaterialComponents.Light.NoActionBar">
         <item name="colorPrimary">@color/purple_500</item>
-        <item name="colorOnPrimary">#FFFFFF</item>
-        <item name="colorSecondary">@color/green_500</item>
-        <item name="android:windowBackground">@color/gray_100</item>
+        <item name="android:windowBackground">@color/gray_200</item>
     </style>
 </resources>
