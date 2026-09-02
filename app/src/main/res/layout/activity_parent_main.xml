@@ -69,7 +69,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        android:gap="12dp">
+        android:layout_margin="12dp">
 
         <Button
             android:id="@+id/btn_localiser"
