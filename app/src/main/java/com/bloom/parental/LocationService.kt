@@ -1,8 +1,8 @@
 package com.bloom.parental
 
 import android.Manifest
-import android.app.Service
 import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.location.Location
 import android.location.LocationListener
@@ -13,7 +13,7 @@ import android.telephony.SmsManager
 import android.util.Log
 import androidx.core.app.ActivityCompat
 
-class LocationService : Service(), LocationListener {
+class LocationService : android.app.Service(), LocationListener {
     private lateinit var locationManager: LocationManager
     private var destinataire = ""
     
@@ -32,7 +32,6 @@ class LocationService : Service(), LocationListener {
         
         locationManager = getSystemService(Context.LOCATION_SERVICE) as LocationManager
         
-        // Demander position GPS
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) 
             == PackageManager.PERMISSION_GRANTED) {
             
@@ -41,7 +40,6 @@ class LocationService : Service(), LocationListener {
             locationManager.requestLocationUpdates(
                 LocationManager.NETWORK_PROVIDER, 1000, 1f, this)
             
-            // Essayer dernière position connue tout de suite
             val dernièrePos = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER)
             dernièrePos?.let { envoyerPosition(it) }
         }
