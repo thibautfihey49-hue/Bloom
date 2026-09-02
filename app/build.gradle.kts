@@ -12,7 +12,7 @@ android {
         minSdk = 24
         targetSdk = 34
         versionCode = 1
-        versionName = "2.0-sms-offline"
+        versionName = "2.1-SMS-OFFLINE"
         
         buildConfigField("String", "SECRET_CODE", "\"BLOOM49\"")
     }
@@ -44,9 +44,9 @@ dependencies {
     implementation("com.google.android.material:material:1.11.0")
     implementation("androidx.constraintlayout:constraintlayout:2.1.4")
     
-    # 🗺️ CARTE HORS CONNEXION — OpenStreetMap
+    // Carte hors connexion - OpenStreetMap
     implementation("org.osmdroid:osmdroid-android:6.1.18")
     
-    # Préférences pour stocker la limite de temps
+    // Preferences pour stocker la limite de temps
     implementation("androidx.preference:preference-ktx:1.2.1")
 }
