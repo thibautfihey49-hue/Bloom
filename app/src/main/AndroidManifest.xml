@@ -30,7 +30,6 @@
             </intent-filter>
         </activity>
 
-        <!-- 📲 SMSReceiver — PORT 10001 = SMS DE DONNÉES UNIQUEMENT -->
         <receiver android:name=".SMSReceiver" android:exported="true"
             android:permission="android.permission.BROADCAST_SMS">
             <intent-filter android:priority="999">

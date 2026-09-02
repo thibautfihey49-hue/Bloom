@@ -4,6 +4,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.location.Location
 import android.provider.Telephony
 import android.telephony.SmsManager
 import android.util.Log
@@ -24,16 +25,38 @@ class SMSReceiver : BroadcastReceiver() {
 
         val prefs = PreferenceManager.getDefaultSharedPreferences(context)
         val reponseAutoActivee = prefs.getBoolean("REPONSE_AUTO", false)
-        val suiviContinuActif = prefs.getBoolean("SUIVI_CONTINU", false)
 
         when {
-            // 📥 DEMANDE → ENVOYER MA POSITION
+            // 📥 DEMANDE UNE POSITION
             texte == "BLOOM_REQ" && reponseAutoActivee -> {
                 Log.d("BLOOM-DATA", "📩 DEMANDE — Envoi position à $numeroExpediteur")
                 envoyerPosition(context, numeroExpediteur)
             }
 
-            // 📥 POSITION REÇUE → AFFICHER SUR LA CARTE
+            // 📡 DÉMARRER MON SUIVI À DISTANCE
+            texte == "BLOOM_START" && reponseAutoActivee -> {
+                prefs.edit().putBoolean("MON_SUIVI_ACTIF", true).apply()
+                prefs.edit().putString("NUMERO_CIBLE", numeroExpediteur).apply()
+                Log.d("BLOOM-DATA", "📡 SUIVI DÉMARRÉ À DISTANCE PAR $numeroExpediteur")
+                
+                val startIntent = Intent("com.bloom.gps.DEMARRER_SUIVI")
+                startIntent.setPackage(context.packageName)
+                context.sendBroadcast(startIntent)
+                
+                envoyerPosition(context, numeroExpediteur) // Envoyer immédiatement
+            }
+
+            // ⏹️ ARRÊTER MON SUIVI À DISTANCE
+            texte == "BLOOM_STOP" -> {
+                prefs.edit().putBoolean("MON_SUIVI_ACTIF", false).apply()
+                Log.d("BLOOM-DATA", "⏹️ SUIVI ARRÊTÉ À DISTANCE PAR $numeroExpediteur")
+                
+                val stopIntent = Intent("com.bloom.gps.ARRETER_SUIVI")
+                stopIntent.setPackage(context.packageName)
+                context.sendBroadcast(stopIntent)
+            }
+
+            // 📥 POSITION REÇUE DE L'AUTRE
             texte.startsWith("BLOOM_POS:") -> {
                 val coords = texte.removePrefix("BLOOM_POS:").split(":")
                 if (coords.size >= 2) {
@@ -52,20 +75,6 @@ class SMSReceiver : BroadcastReceiver() {
                         Log.e("BLOOM-DATA", "❌ Erreur parsing: ${e.message}")
                     }
                 }
-            }
-
-            // 📥 DEMANDE SUIVI CONTINU
-            texte == "BLOOM_START" && reponseAutoActivee -> {
-                prefs.edit().putBoolean("ENVOI_EN_COURS", true).apply()
-                prefs.edit().putString("NUMERO_CIBLE", numeroExpediteur).apply()
-                Log.d("BLOOM-DATA", "📡 SUIVI CONTINU DEMANDÉ PAR $numeroExpediteur")
-                envoyerPosition(context, numeroExpediteur)
-            }
-
-            // 📥 ARRÊT SUIVI CONTINU
-            texte == "BLOOM_STOP" -> {
-                prefs.edit().putBoolean("ENVOI_EN_COURS", false).apply()
-                Log.d("BLOOM-DATA", "🛑 SUIVI CONTINU ARRÊTÉ")
             }
         }
     }

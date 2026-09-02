@@ -1,7 +1,6 @@
 package com.bloom.gps
 
 import android.Manifest
-import android.app.AlertDialog
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -40,6 +39,8 @@ class MainActivity : AppCompatActivity(), LocationListener {
     private lateinit var btnDemander: Button
     private lateinit var btnRepondre: Button
     private lateinit var btnSuivre: Button
+    private lateinit var btnDemarrerLui: Button
+    private lateinit var btnArreterLui: Button
     private lateinit var btnSuiviContinu: Button
     
     private var marqueurMoi: Marker? = null
@@ -48,9 +49,38 @@ class MainActivity : AppCompatActivity(), LocationListener {
     
     private val PERMISSIONS_REQUEST = 1001
     private var reponseAutoActivee = false
-    private var suiviContinuActif = false
+    private var monSuiviActif = false
     private var dernierePosition: Location? = null
-    private var derniereDistanceEnvoi = 0f  // Compteur pour les 10 mètres
+    private var derniereDistanceEnvoi = 0f
+
+    // 📡 RECEVEUR — DÉMARRER MON SUIVI À DISTANCE
+    private val demarrerSuiviReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            monSuiviActif = true
+            PreferenceManager.getDefaultSharedPreferences(this@MainActivity)
+                .edit().putBoolean("MON_SUIVI_ACTIF", true).apply()
+            derniereDistanceEnvoi = 0f
+            dernierePosition = null
+            mettreAJourBoutons()
+            Toast.makeText(context, "📡 SUIVI DÉMARRÉ À DISTANCE ! Envoi toutes les 10m", Toast.LENGTH_LONG).show()
+            tvStatut.text = "✅ SUIVI ACTIF — Contrôlé à distance"
+        }
+    }
+
+    // ⏹️ RECEVEUR — ARRÊTER MON SUIVI À DISTANCE
+    private val arreterSuiviReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            monSuiviActif = false
+            PreferenceManager.getDefaultSharedPreferences(this@MainActivity)
+                .edit().putBoolean("MON_SUIVI_ACTIF", false).apply()
+            derniereDistanceEnvoi = 0f
+            dernierePosition = null
+            mettreAJourBoutons()
+            Toast.makeText(context, "⏹️ SUIVI ARRÊTÉ À DISTANCE", Toast.LENGTH_SHORT).show()
+            tvStatut.text = "⏳ Suivi arrêté — Contrôlé à distance"
+            tvDistance.text = "📡 Dernier envoi: —"
+        }
+    }
 
     private val maPositionReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
@@ -99,6 +129,8 @@ class MainActivity : AppCompatActivity(), LocationListener {
         btnDemander = findViewById(R.id.btnDemander)
         btnRepondre = findViewById(R.id.btnRepondre)
         btnSuivre = findViewById(R.id.btnSuivre)
+        btnDemarrerLui = findViewById(R.id.btnDemarrerLui)
+        btnArreterLui = findViewById(R.id.btnArreterLui)
         btnSuiviContinu = findViewById(R.id.btnSuiviContinu)
     }
 
@@ -107,7 +139,7 @@ class MainActivity : AppCompatActivity(), LocationListener {
         etMonNumero.setText(prefs.getString("MON_NUM", ""))
         etAutreNumero.setText(prefs.getString("AUTRE_NUM", ""))
         reponseAutoActivee = prefs.getBoolean("REP_AUTO", false)
-        suiviContinuActif = prefs.getBoolean("SUIVI_CONTINU", false)
+        monSuiviActif = prefs.getBoolean("MON_SUIVI_ACTIF", false)
         mettreAJourBoutons()
     }
 
@@ -124,7 +156,6 @@ class MainActivity : AppCompatActivity(), LocationListener {
                 this, Manifest.permission.ACCESS_FINE_LOCATION
             ) != PackageManager.PERMISSION_GRANTED
         ) return
-        // 📡 Mise à jour TOUTES LES 1 SECONDE ou TOUS LES 1 MÈTRE
         locationManager.requestLocationUpdates(
             LocationManager.GPS_PROVIDER, 1000, 1f, this
         )
@@ -136,20 +167,18 @@ class MainActivity : AppCompatActivity(), LocationListener {
     override fun onLocationChanged(nouvellePosition: Location) {
         mettreAJourMoi(nouvellePosition.latitude, nouvellePosition.longitude)
         
-        // 📡 SUIVI CONTINU : Envoyer seulement si on a bougé de 10m
-        if (suiviContinuActif && dernierePosition != null) {
+        // 📡 ENVOI AUTOMATIQUE TOUTES LES 10M SI SUIVI ACTIF
+        if (monSuiviActif && dernierePosition != null) {
             val distance = nouvellePosition.distanceTo(dernierePosition!!)
             derniereDistanceEnvoi += distance
             
             tvDistance.text = "📡 Déplacement: ${derniereDistanceEnvoi.roundToInt()}m / 10m"
             
-            // ✅ Envoyer quand on a atteint 10 mètres
             if (derniereDistanceEnvoi >= 10f) {
                 envoyerPositionSuiviContinu(nouvellePosition)
-                derniereDistanceEnvoi = 0f  // Réinitialiser
+                derniereDistanceEnvoi = 0f
             }
         } else if (dernierePosition == null) {
-            // Première position — sauvegarder sans envoyer
             derniereDistanceEnvoi = 0f
         }
         
@@ -166,8 +195,7 @@ class MainActivity : AppCompatActivity(), LocationListener {
                 Toast.makeText(this, "⚠️ Entrez le numéro de l'abord !", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
-            PreferenceManager.getDefaultSharedPreferences(this)
-                .edit().putString("AUTRE_NUM", num).apply()
+            sauvegarderNumeros()
             
             try {
                 SmsManager.getDefault().sendDataMessage(
@@ -189,9 +217,7 @@ class MainActivity : AppCompatActivity(), LocationListener {
                 Toast.makeText(this, "⚠️ Entrez le numéro de l'abord !", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
-            PreferenceManager.getDefaultSharedPreferences(this)
-                .edit().putString("AUTRE_NUM", num).apply()
-            
+            sauvegarderNumeros()
             envoyerMaPosition(num)
         }
 
@@ -202,8 +228,7 @@ class MainActivity : AppCompatActivity(), LocationListener {
                 Toast.makeText(this, "⚠️ Entrez le numéro de l'abord !", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
-            PreferenceManager.getDefaultSharedPreferences(this)
-                .edit().putString("AUTRE_NUM", num).apply()
+            sauvegarderNumeros()
             
             reponseAutoActivee = !reponseAutoActivee
             PreferenceManager.getDefaultSharedPreferences(this)
@@ -220,54 +245,73 @@ class MainActivity : AppCompatActivity(), LocationListener {
             }
         }
 
-        // 📡 SUIVI CONTINU — ENVOI TOUTES LES 10 MÈTRES
-        btnSuiviContinu.setOnClickListener {
+        // ▶️ DÉMARRER SON SUIVI À DISTANCE
+        btnDemarrerLui.setOnClickListener {
             val num = etAutreNumero.text.toString().trim()
             if (num.isEmpty()) {
                 Toast.makeText(this, "⚠️ Entrez le numéro de l'abord !", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
-            PreferenceManager.getDefaultSharedPreferences(this)
-                .edit().putString("AUTRE_NUM", num).apply()
+            sauvegarderNumeros()
             
-            suiviContinuActif = !suiviContinuActif
-            PreferenceManager.getDefaultSharedPreferences(this)
-                .edit().putBoolean("SUIVI_CONTINU", suiviContinuActif).apply()
-            
-            derniereDistanceEnvoi = 0f
-            dernierePosition = null
-            
-            mettreAJourBoutons()
-            
-            if (suiviContinuActif) {
-                AlertDialog.Builder(this)
-                    .setTitle("📡 SUIVI CONTINU ACTIVÉ")
-                    .setMessage("✅ Votre position sera envoyée automatiquement TOUTES LES 10 MÈTRES à :\n$num\n\n🕵️ Invisible — rien dans la messagerie !")
-                    .setPositiveButton("OK") { _, _ -> }
-                    .show()
-                tvStatut.text = "📡 SUIVI CONTINU ACTIF — Envoi toutes les 10m"
-                // 📡 Prévenir l'autre téléphone que le suivi commence
-                try {
-                    SmsManager.getDefault().sendDataMessage(
-                        num, null, 10001.toShort(),
-                        "BLOOM_START".toByteArray(Charsets.UTF_8),
-                        null, null
-                    )
-                } catch (e: Exception) {}
-            } else {
-                Toast.makeText(this, "🛑 SUIVI CONTINU ARRÊTÉ", Toast.LENGTH_SHORT).show()
-                tvStatut.text = "⏳ Suivi continu arrêté"
-                tvDistance.text = "📡 Dernier envoi: —"
-                // 📡 Prévenir l'autre téléphone que le suivi s'arrête
-                try {
-                    SmsManager.getDefault().sendDataMessage(
-                        num, null, 10001.toShort(),
-                        "BLOOM_STOP".toByteArray(Charsets.UTF_8),
-                        null, null
-                    )
-                } catch (e: Exception) {}
+            try {
+                SmsManager.getDefault().sendDataMessage(
+                    num, null, 10001.toShort(),
+                    "BLOOM_START".toByteArray(Charsets.UTF_8),
+                    null, null
+                )
+                Toast.makeText(this, "▶️ DEMANDÉ — Son suivi va démarrer !", Toast.LENGTH_SHORT).show()
+                tvStatut.text = "✅ Commande envoyée — Il suit maintenant"
+            } catch (e: Exception) {
+                Toast.makeText(this, "❌ Erreur: ${e.message}", Toast.LENGTH_SHORT).show()
             }
         }
+
+        // ⏹️ ARRÊTER SON SUIVI À DISTANCE
+        btnArreterLui.setOnClickListener {
+            val num = etAutreNumero.text.toString().trim()
+            if (num.isEmpty()) {
+                Toast.makeText(this, "⚠️ Entrez le numéro de l'abord !", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+            sauvegarderNumeros()
+            
+            try {
+                SmsManager.getDefault().sendDataMessage(
+                    num, null, 10001.toShort(),
+                    "BLOOM_STOP".toByteArray(Charsets.UTF_8),
+                    null, null
+                )
+                Toast.makeText(this, "⏹️ COMMANDÉ — Son suivi s'arrête !", Toast.LENGTH_SHORT).show()
+                tvStatut.text = "✅ Commande envoyée — Il s'arrête"
+            } catch (e: Exception) {
+                Toast.makeText(this, "❌ Erreur: ${e.message}", Toast.LENGTH_SHORT).show()
+            }
+        }
+
+        // 📡 MON PROPRE SUIVI CONTINU
+        btnSuiviContinu.setOnClickListener {
+            monSuiviActif = !monSuiviActif
+            sauvegarderNumeros()
+            derniereDistanceEnvoi = 0f
+            dernierePosition = null
+            mettreAJourBoutons()
+            
+            if (monSuiviActif) {
+                Toast.makeText(this, "📡 MON SUIVI ACTIF — Envoi toutes les 10m", Toast.LENGTH_LONG).show()
+                tvStatut.text = "✅ Mon suivi ACTIF — Envoi toutes les 10m"
+            } else {
+                Toast.makeText(this, "🛑 MON SUIVI ARRÊTÉ", Toast.LENGTH_SHORT).show()
+                tvStatut.text = "⏳ Mon suivi arrêté"
+                tvDistance.text = "📡 Dernier envoi: —"
+            }
+        }
+    }
+
+    private fun sauvegarderNumeros() {
+        val prefs = PreferenceManager.getDefaultSharedPreferences(this)
+        prefs.edit().putString("MON_NUM", etMonNumero.text.toString().trim()).apply()
+        prefs.edit().putString("AUTRE_NUM", etAutreNumero.text.toString().trim()).apply()
     }
 
     private fun envoyerPositionSuiviContinu(pos: Location) {
@@ -281,8 +325,7 @@ class MainActivity : AppCompatActivity(), LocationListener {
                 message.toByteArray(Charsets.UTF_8),
                 null, null
             )
-            tvDistance.text = "✅ ENVOYÉ ! Nouvelle position à ${pos.latitude}, ${pos.longitude}"
-            tvStatut.text = "📡 Envoi automatique — OK"
+            tvDistance.text = "✅ ENVOYÉ ! Déplacement: ~10m"
         } catch (e: Exception) {
             tvDistance.text = "❌ Erreur envoi: ${e.message}"
         }
@@ -328,16 +371,18 @@ class MainActivity : AppCompatActivity(), LocationListener {
             btnSuivre.setBackgroundColor(Color.parseColor("#F59E0B"))
         }
 
-        if (suiviContinuActif) {
+        if (monSuiviActif) {
             btnSuiviContinu.text = "📡 ACTIF"
             btnSuiviContinu.setBackgroundColor(Color.parseColor("#10B981"))
         } else {
-            btnSuiviContinu.text = "📡 Suivi continu"
+            btnSuiviContinu.text = "📡 Moi suivre"
             btnSuiviContinu.setBackgroundColor(Color.parseColor("#2563EB"))
         }
     }
 
     private fun enregistrerReceveurs() {
+        registerReceiver(demarrerSuiviReceiver, IntentFilter("com.bloom.gps.DEMARRER_SUIVI"), RECEIVER_NOT_EXPORTED)
+        registerReceiver(arreterSuiviReceiver, IntentFilter("com.bloom.gps.ARRETER_SUIVI"), RECEIVER_NOT_EXPORTED)
         registerReceiver(maPositionReceiver, IntentFilter("com.bloom.gps.MA_POSITION"), RECEIVER_NOT_EXPORTED)
         registerReceiver(autrePositionReceiver, IntentFilter("com.bloom.gps.AUTRE_POSITION"), RECEIVER_NOT_EXPORTED)
     }
@@ -425,6 +470,8 @@ class MainActivity : AppCompatActivity(), LocationListener {
     override fun onPause() { super.onPause(); mapView.onPause() }
     override fun onDestroy() {
         super.onDestroy()
+        unregisterReceiver(demarrerSuiviReceiver)
+        unregisterReceiver(arreterSuiviReceiver)
         unregisterReceiver(maPositionReceiver)
         unregisterReceiver(autrePositionReceiver)
         locationManager.removeUpdates(this)
