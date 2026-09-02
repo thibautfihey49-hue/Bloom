@@ -11,20 +11,27 @@ import android.media.AudioRecord
 import android.media.MediaRecorder
 import android.os.Build
 import android.os.IBinder
-import com.bloom.parental.data.Prefs
-import kotlinx.coroutines.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.launch
+import kotlin.math.abs
+import kotlin.math.sqrt
 
 class EnvironmentMonitorService : Service() {
-    private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+    private val job = SupervisorJob()
+    private val scope = CoroutineScope(Dispatchers.IO + job)
+    private val CHANNEL_ID = "bloom_env_monitor"
     private var audioRecord: AudioRecord? = null
-    private var isRunning = false
+    private var isRecording = false
 
     companion object {
         private val _soundLevel = MutableStateFlow(0)
-        val soundLevel = _soundLevel.asStateFlow()
-        private const val CHANNEL_ID = "bloom_env_monitor"
+        val soundLevel: StateFlow<Int> = _soundLevel
+        private var instance: EnvironmentMonitorService? = null
 
         fun start(context: Context) {
             val intent = Intent(context, EnvironmentMonitorService::class.java)
@@ -42,9 +49,14 @@ class EnvironmentMonitorService : Service() {
 
     override fun onCreate() {
         super.onCreate()
+        instance = this
         createNotificationChannel()
-        startForeground(1, createNotification())
-        startMonitoring()
+        try {
+            startForeground(1, createNotification())
+            startAudioMonitoring()
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -55,17 +67,19 @@ class EnvironmentMonitorService : Service() {
 
     override fun onDestroy() {
         super.onDestroy()
-        stopMonitoring()
+        stopAudioMonitoring()
+        job.cancel()
+        instance = null
     }
 
     private fun createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
                 CHANNEL_ID,
-                "Surveillance environnementale",
-                NotificationManager.IMPORTANCE_MIN
+                "Surveillance ambiante",
+                NotificationManager.IMPORTANCE_LOW
             ).apply {
-                description = "Fonctionnement en arrière-plan"
+                description = "Niveau sonore ambiant"
                 setShowBadge(false)
                 enableVibration(false)
                 setSound(null, null)
@@ -78,68 +92,83 @@ class EnvironmentMonitorService : Service() {
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             Notification.Builder(this, CHANNEL_ID)
                 .setContentTitle("Bloom")
-                .setContentText("Fonctionnement en arrière-plan")
+                .setContentText("Surveillance active")
                 .setSmallIcon(android.R.drawable.ic_menu_info_details)
-                .setPriority(Notification.PRIORITY_MIN)
+                .setPriority(Notification.PRIORITY_LOW)
                 .setOngoing(true)
                 .build()
         } else {
             @Suppress("DEPRECATION")
             Notification.Builder(this)
                 .setContentTitle("Bloom")
-                .setContentText("Fonctionnement en arrière-plan")
+                .setContentText("Surveillance active")
                 .setSmallIcon(android.R.drawable.ic_menu_info_details)
-                .setPriority(Notification.PRIORITY_MIN)
+                .setPriority(Notification.PRIORITY_LOW)
                 .setOngoing(true)
                 .build()
         }
     }
 
-    private fun startMonitoring() {
-        if (isRunning) return
-        isRunning = true
+    private fun startAudioMonitoring() {
+        if (isRecording) return
+        isRecording = true
 
-        val sampleRate = 8000
+        val sampleRate = 44100
         val channelConfig = AudioFormat.CHANNEL_IN_MONO
         val audioFormat = AudioFormat.ENCODING_PCM_16BIT
-        val minBuffer = AudioRecord.getMinBufferSize(sampleRate, channelConfig, audioFormat)
+        val bufferSize = AudioRecord.getMinBufferSize(sampleRate, channelConfig, audioFormat) * 2
 
         try {
-            audioRecord = AudioRecord(
-                MediaRecorder.AudioSource.MIC,
-                sampleRate,
-                channelConfig,
-                audioFormat,
-                minBuffer * 4
-            )
-            audioRecord?.startRecording()
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                audioRecord = AudioRecord.Builder()
+                    .setAudioSource(MediaRecorder.AudioSource.MIC)
+                    .setSampleRateInHz(sampleRate)
+                    .setChannelConfig(channelConfig)
+                    .setAudioFormat(audioFormat)
+                    .setBufferSizeInBytes(bufferSize)
+                    .build()
+            } else {
+                @Suppress("DEPRECATION")
+                audioRecord = AudioRecord(
+                    MediaRecorder.AudioSource.MIC,
+                    sampleRate, channelConfig, audioFormat, bufferSize
+                )
+            }
 
-            scope.launch {
-                val buffer = ShortArray(minBuffer)
-                while (isRunning) {
-                    val read = audioRecord?.read(buffer, 0, buffer.size) ?: 0
-                    if (read > 0) {
-                        var sum = 0L
-                        for (i in 0 until read) {
-                            sum += buffer[i] * buffer[i]
+            if (audioRecord?.state == AudioRecord.STATE_INITIALIZED) {
+                audioRecord?.startRecording()
+                scope.launch {
+                    val buffer = ShortArray(bufferSize / 2)
+                    while (isRecording) {
+                        try {
+                            val read = audioRecord?.read(buffer, 0, buffer.size) ?: 0
+                            if (read > 0) {
+                                var sum = 0.0
+                                for (i in 0 until read) {
+                                    sum += buffer[i] * buffer[i]
+                                }
+                                val rms = sqrt(sum / read)
+                                val db = if (rms > 0) (20 * kotlin.math.log10(rms / 32767.0)).toInt() + 100 else 0
+                                _soundLevel.value = db.coerceIn(0, 120)
+                            }
+                            delay(1000)
+                        } catch (e: Exception) {
+                            delay(1000)
                         }
-                        val rms = Math.sqrt(sum / read.toDouble())
-                        val db = if (rms > 0) (20 * Math.log10(rms / 32767.0)).toInt() else -60
-                        _soundLevel.value = db
                     }
-                    delay(2000)
                 }
             }
+        } catch (e: SecurityException) {
+            isRecording = false
         } catch (e: Exception) {
-            e.printStackTrace()
+            isRecording = false
         }
     }
 
-    private fun stopMonitoring() {
-        isRunning = false
-        scope.cancel()
+    private fun stopAudioMonitoring() {
+        isRecording = false
         audioRecord?.apply {
-            stop()
+            if (recordingState == AudioRecord.RECORDING_STATE_RECORDING) stop()
             release()
         }
         audioRecord = null

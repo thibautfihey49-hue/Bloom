@@ -29,8 +29,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
-import androidx.compose.ui.text.input.TextFieldValue
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
@@ -44,33 +42,47 @@ class MainActivity : ComponentActivity() {
         ActivityResultContracts.RequestMultiplePermissions()
     ) { permissions ->
         val allGranted = permissions.all { it.value }
-        if (!allGranted) {
-            Toast.makeText(this, "Permissions nécessaires pour fonctionner", Toast.LENGTH_LONG).show()
-        }
+        Toast.makeText(this, if (allGranted) "✅ Permissions accordées !" else "⚠️ Certaines permissions manquent", Toast.LENGTH_LONG).show()
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         Prefs.init(this)
         setContent { BloomApp() }
+        checkOrRequestPermissions()
     }
 
     fun checkOrRequestPermissions() {
         val needed = mutableListOf<String>()
+
+        // SMS
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.SEND_SMS) != PackageManager.PERMISSION_GRANTED) {
             needed.add(Manifest.permission.SEND_SMS)
             needed.add(Manifest.permission.RECEIVE_SMS)
             needed.add(Manifest.permission.READ_SMS)
         }
+
+        // Microphone
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
             needed.add(Manifest.permission.RECORD_AUDIO)
         }
+
+        // Notifications (Android 13+)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
             ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
             needed.add(Manifest.permission.POST_NOTIFICATIONS)
         }
+
         if (needed.isNotEmpty()) {
             requestPermissionLauncher.launch(needed.toTypedArray())
+        }
+
+        // Guide pour la permission d'usage (pas demandable directement)
+        if (!hasUsageStatsPermission(this)) {
+            Toast.makeText(this, "⚠️ Autorise l'accès aux données d'usage dans les paramètres", Toast.LENGTH_LONG).show()
+            val intent = Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS)
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            startActivity(intent)
         }
     }
 }
@@ -239,8 +251,7 @@ fun RoleSelectionScreen() {
                                     modifier = Modifier.fillMaxWidth(),
                                     placeholder = { Text("____") },
                                     visualTransformation = PasswordVisualTransformation(),
-                                    singleLine = true,
-                                    textStyle = androidx.compose.ui.text.TextStyle(textAlign = TextAlign.Center, fontSize = 20.sp)
+                                    singleLine = true
                                 )
                                 Text("⚠️ Ce code protège l'accès à l'espace parent", color = BloomTextSec, fontSize = 11.sp)
                             }
@@ -270,7 +281,6 @@ fun RoleSelectionScreen() {
                                 Prefs.isParent = selectedMode == "parent"
                                 if (selectedMode == "parent") Prefs.codeSecret = codeSecret
                                 Toast.makeText(ctx, "Configuration sauvegardée", Toast.LENGTH_SHORT).show()
-                                (ctx as MainActivity).checkOrRequestPermissions()
                                 if (selectedMode == "child") {
                                     EnvironmentMonitorService.start(ctx)
                                     AppInstallMonitorService.start(ctx)
@@ -307,7 +317,7 @@ fun ParentScreen() {
             usage = UsageStatsMonitor(ctx).getTodayMinutes()
             apps = UsageStatsMonitor(ctx).getAppsToday()
             pendingApps = Prefs.getAllPendingApps()
-            delay(30000)
+            delay(15000) // Rafraîchi toutes les 15s
         }
     }
 
@@ -408,7 +418,7 @@ fun ParentScreen() {
                                     Column { Text("🎯 Limite", color = BloomTextSec); Text(formatMinutes(limit), fontSize = 24.sp, fontWeight = FontWeight.Bold, color = BloomAccent) }
                                 }
                                 Slider(value = limit.toFloat(), onValueChange = { limit = it.toInt() }, valueRange = 30f..480f, steps = 14)
-                                Button(onClick = { Prefs.dailyLimit = limit; BloomSmsManager.sendCommand(ctx, "limit", limit.toString()); Toast.makeText(ctx, "Limite globale mise à jour", Toast.LENGTH_SHORT).show() }, modifier = Modifier.fillMaxWidth()) {
+                                Button(onClick = { Prefs.dailyLimit = limit; BloomSmsManager.sendCommand(ctx, "limit", limit.toString()); Toast.makeText(ctx, "✅ Limite mise à jour", Toast.LENGTH_SHORT).show() }, modifier = Modifier.fillMaxWidth()) {
                                     Text("✅ Appliquer la limite globale")
                                 }
                             }
@@ -422,7 +432,13 @@ fun ParentScreen() {
                                 Text("Clique pour régler le temps ou bloquer", color = BloomTextSec, fontSize = 12.sp)
                                 Divider()
                                 if (apps.isEmpty()) {
-                                    Text("⏳ En attente des données de l'enfant...", color = BloomTextSec, modifier = Modifier.padding(vertical = 20.dp))
+                                    Column(modifier = Modifier.fillMaxWidth().padding(vertical = 30.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                                        Text("⏳ En attente des données de l'enfant...", color = BloomTextSec)
+                                        Spacer(Modifier.height(8.dp))
+                                        Text("💡 Sur le téléphone de l'enfant :", color = BloomTextSec, fontSize = 11.sp)
+                                        Text("→ Accorder l'accès aux données d'usage", color = BloomTextSec, fontSize = 11.sp)
+                                        Text("→ Ouvrir une application 1 minute", color = BloomTextSec, fontSize = 11.sp)
+                                    }
                                 } else {
                                     apps.forEach { app ->
                                         Row(
@@ -489,15 +505,12 @@ fun ParentScreen() {
                             Column {
                                 Text("Utilisé aujourd'hui : ${formatMinutes(app.usedMinutes)}", color = BloomTextSec, fontSize = 13.sp)
                                 Spacer(Modifier.height(16.dp))
-
                                 Text("⏱️ Limite d'utilisation : ${formatMinutes(limit)}")
                                 Slider(value = limit.toFloat(), onValueChange = { limit = it.toInt() }, valueRange = 0f..240f, steps = 15)
                                 Text("0 = Illimité", color = BloomTextSec, fontSize = 12.sp)
-
                                 Spacer(Modifier.height(16.dp))
                                 Divider()
                                 Spacer(Modifier.height(12.dp))
-
                                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
                                     Text("🚫 Bloquer cette application", color = BloomText)
                                     Switch(checked = blocked, onCheckedChange = { blocked = it })
