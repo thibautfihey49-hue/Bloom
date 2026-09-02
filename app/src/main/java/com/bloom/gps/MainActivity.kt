@@ -162,7 +162,7 @@ class MainActivity : AppCompatActivity() {
             autreMarqueur = Marker(mapView).apply {
                 position = point; title = "📍 AUTRE"; snippet = "$lat, $lon"
                 setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
-                icon = resources.getDrawable(android.R.drawable.ic_menu_marker, null)
+                icon = resources.getDrawable(android.R.drawable.ic_menu_mylocation, null)
             }
             mapView.overlays.add(autreMarqueur)
         } else autreMarqueur!!.position = point
