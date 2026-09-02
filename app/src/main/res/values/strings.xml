@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name" translatable="false"> </string>
-    <string name="secret_code">bloom123</string>
-    <string name="search_hint">Rechercher...</string>
+    <string name="dial_code">*#2566#</string>
+    <string name="dial_code_suffix">#2566#</string>
 </resources>

