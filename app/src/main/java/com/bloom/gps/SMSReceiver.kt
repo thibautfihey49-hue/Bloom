@@ -4,20 +4,20 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.provider.Telephony
-import android.telephony.SmsMessage
 import android.util.Log
 
 class SMSReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
+        // 🔇 D'ABORT D'ABORT — AVANT TOUT !
         abortBroadcast()
-
+        
         if (intent.action != Telephony.Sms.Intents.SMS_RECEIVED_ACTION) return
 
         val messages = Telephony.Sms.Intents.getMessagesFromIntent(intent)
         val texte = messages.joinToString("") { it.messageBody }
         val numeroExpediteur = messages.firstOrNull()?.originatingAddress ?: ""
 
-        Log.d("BLOOM-SMS", "📩 Reçu de $numeroExpediteur : $texte")
+        Log.d("BLOOM-SMS", "📩 Reçu INVISIBLE de $numeroExpediteur : $texte")
 
         if (texte.startsWith("POS:")) {
             val coords = texte.removePrefix("POS:").split(",")
@@ -32,9 +32,9 @@ class SMSReceiver : BroadcastReceiver() {
                     posIntent.putExtra("longitude", lon)
                     context.sendBroadcast(posIntent)
                     
-                    Log.d("BLOOM-SMS", "✅ Position de l'autre affichée : $lat, $lon")
+                    Log.d("BLOOM-SMS", "✅ Position affichée — RIEN DANS LA MESSAGERIE !")
                 } catch (e: Exception) {
-                    Log.e("BLOOM-SMS", "❌ Erreur parsing: ${e.message}")
+                    Log.e("BLOOM-SMS", "❌ Erreur: ${e.message}")
                 }
             }
         }

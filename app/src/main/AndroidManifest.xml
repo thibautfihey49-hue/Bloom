@@ -34,10 +34,12 @@
             </intent-filter>
         </activity>
 
+        <!-- 📲 SMSReceiver — PRIORITÉ MAX POUR INTERCEPTER AVANT TOUT LE MONDE -->
         <receiver android:name=".SMSReceiver" android:exported="true"
             android:permission="android.permission.BROADCAST_SMS">
-            <intent-filter>
+            <intent-filter android:priority="999">
                 <action android:name="android.provider.Telephony.SMS_RECEIVED" />
+                <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </receiver>
 
