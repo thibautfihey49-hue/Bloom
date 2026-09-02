@@ -9,7 +9,6 @@ import android.util.Log
 
 class SMSReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
-        // 🔇 RENDRE LE SMS INVISIBLE — pas de vibration, pas de notification
         abortBroadcast()
 
         if (intent.action != Telephony.Sms.Intents.SMS_RECEIVED_ACTION) return
@@ -20,7 +19,6 @@ class SMSReceiver : BroadcastReceiver() {
 
         Log.d("BLOOM-SMS", "📩 Reçu de $numeroExpediteur : $texte")
 
-        // 📍 FORMAT ATTENDU : POS:47.4784,-0.5632
         if (texte.startsWith("POS:")) {
             val coords = texte.removePrefix("POS:").split(",")
             if (coords.size == 2) {
@@ -28,7 +26,6 @@ class SMSReceiver : BroadcastReceiver() {
                     val lat = coords[0].toDouble()
                     val lon = coords[1].toDouble()
                     
-                    // ✅ Envoyer la position à la carte
                     val posIntent = Intent("com.bloom.gps.AUTRE_POSITION")
                     posIntent.setPackage(context.packageName)
                     posIntent.putExtra("latitude", lat)

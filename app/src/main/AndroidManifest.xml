@@ -2,7 +2,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
-    <!-- 🔴 PERMISSIONS OBLIGATOIRES -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
@@ -35,7 +34,6 @@
             </intent-filter>
         </activity>
 
-        <!-- 📲 Récepteur SMS INVISIBLE -->
         <receiver android:name=".SMSReceiver" android:exported="true"
             android:permission="android.permission.BROADCAST_SMS">
             <intent-filter>
@@ -43,7 +41,6 @@
             </intent-filter>
         </receiver>
 
-        <!-- 📍 Service de suivi GPS -->
         <service
             android:name=".LocationService"
             android:exported="false"

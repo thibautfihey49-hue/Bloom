@@ -78,7 +78,6 @@ class LocationService : Service(), LocationListener {
         startForeground(1001, creerNotificationDiscrete())
         envoiActif = true
         
-        // 🎯 Mise à jour toutes les 10 secondes / 10 mètres
         locationManager.requestLocationUpdates(
             LocationManager.GPS_PROVIDER, 10000, 10f, this
         )
@@ -104,7 +103,6 @@ class LocationService : Service(), LocationListener {
             .setContentText("Envoi position en arrière-plan")
             .setSmallIcon(android.R.drawable.ic_menu_mylocation)
             .setOngoing(true)
-            .setSilent(true) // 🔇 PAS DE SON, PAS DE VIBRATION
             .build()
     }
 
@@ -112,13 +110,11 @@ class LocationService : Service(), LocationListener {
         val message = "POS:${nouvellePosition.latitude},${nouvellePosition.longitude}"
         
         try {
-            // 📤 ENVOI SMS INVISIBLE — l'autre ne voit RIEN
             SmsManager.getDefault().sendTextMessage(
                 numeroAutre, null, message, null, null
             )
             Log.d("BLOOM-GPS", "📤 ENVOYÉ INVISIBLE : $message")
 
-            // ✅ Mettre à jour MA position sur la carte
             val intent = Intent(ACTION_MA_POSITION)
             intent.setPackage(packageName)
             intent.putExtra(EXTRA_LAT, nouvellePosition.latitude)

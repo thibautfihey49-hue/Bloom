@@ -20,7 +20,6 @@ import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.Marker
-import org.osmdroid.views.overlay.OverlayItem
 
 class MainActivity : AppCompatActivity() {
     
@@ -39,7 +38,6 @@ class MainActivity : AppCompatActivity() {
     
     private val PERMISSIONS = 1001
 
-    // 📩 Récepteur MA position
     private val maPositionReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             val lat = intent?.getDoubleExtra(LocationService.EXTRA_LAT, 0.0) ?: 0.0
@@ -48,7 +46,6 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    // 📩 Récepteur position DE L'AUTRE
     private val autrePositionReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             val lat = intent?.getDoubleExtra("latitude", 0.0) ?: 0.0
@@ -204,7 +201,6 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    // 📍 METTRE À JOUR MA POSITION — BLEU
     private fun mettreAJourMoi(lat: Double, lon: Double) {
         val point = GeoPoint(lat, lon)
         
@@ -226,7 +222,6 @@ class MainActivity : AppCompatActivity() {
         mapView.invalidate()
     }
 
-    // 📍 METTRE À JOUR SA POSITION — ROUGE
     private fun mettreAJourLui(lat: Double, lon: Double) {
         val point = GeoPoint(lat, lon)
         
@@ -236,7 +231,7 @@ class MainActivity : AppCompatActivity() {
                 title = "📍 LUI"
                 snippet = "$lat, $lon"
                 setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
-                icon = resources.getDrawable(android.R.drawable.ic_menu_marker, null)
+                icon = resources.getDrawable(android.R.drawable.ic_menu_mylocation, null)
             }
             mapView.overlays.add(marqueurLui)
         } else {
