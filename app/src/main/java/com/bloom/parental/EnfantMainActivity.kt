@@ -5,11 +5,10 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.os.Bundle
-import android.view.View
+import android.telephony.SmsManager
 import android.widget.Button
-import android.widget.LinearLayout
-import android.widget.ScrollView
 import android.widget.TextView
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.preference.PreferenceManager
 
@@ -20,67 +19,19 @@ class EnfantMainActivity : AppCompatActivity() {
     
     private val demandeTempsReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
-            tvDemandeTemps.visibility = View.VISIBLE
+            tvDemandeTemps.visibility = android.view.View.VISIBLE
         }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        setContentView(R.layout.activity_enfant_main)
         
-        val scroll = ScrollView(this)
-        val container = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(48, 48, 48, 48)
-            setBackgroundColor(0xFFF0FDF4.toInt())
-        }
+        tvStatut = findViewById(R.id.tvStatut)
+        tvDemandeTemps = findViewById(R.id.tvDemandeTemps)
+        btnDemanderTemps = findViewById(R.id.btnDemanderTemps)
         
-        // 📌 Titre
-        val titre = TextView(this).apply {
-            text = "🌸 Bloom — Mon Espace"
-            textSize = 28f
-            setTextColor(0xFF059669.toInt())
-            setPadding(0, 0, 0, 40)
-        }
-        container.addView(titre)
-        
-        // 📌 Statut
-        tvStatut = TextView(this).apply {
-            text = "✅ Connecté — Surveillance active"
-            textSize = 16f
-            setTextColor(0xFF10B981.toInt())
-            setPadding(0, 0, 0, 40)
-        }
-        container.addView(tvStatut)
-        
-        // 📌 Demande de temps (affichée EN CLAIR)
-        tvDemandeTemps = TextView(this).apply {
-            visibility = View.GONE
-            text = "⏳ Demande envoyée : \"Je peux avoir plus de temps ?\""
-            textSize = 18f
-            setBackgroundColor(0xFFD1FAE5.toInt())
-            setTextColor(0xFF065F46.toInt())
-            setPadding(24, 16, 24, 16)
-            setPadding(0, 0, 0, 40)
-        }
-        container.addView(tvDemandeTemps)
-        
-        // 📌 Bouton : Demander plus de temps
-        btnDemanderTemps = Button(this).apply {
-            text = "⏳ DEMANDER PLUS DE TEMPS"
-            textSize = 16f
-            setBackgroundColor(0xFF10B981.toInt())
-            setTextColor(android.graphics.Color.WHITE)
-            setPadding(48, 24, 48, 24)
-            setOnClickListener { demanderPlusDeTemps() }
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
-            ).apply { setMargins(0, 0, 0, 24) }
-        }
-        container.addView(btnDemanderTemps)
-        
-        scroll.addView(container)
-        setContentView(scroll)
+        btnDemanderTemps.setOnClickListener { demanderPlusDeTemps() }
         
         registerReceiver(demandeTempsReceiver, IntentFilter("com.bloom.parental.AFFICHER_DEMANDE_TEMPS"))
     }
@@ -89,14 +40,14 @@ class EnfantMainActivity : AppCompatActivity() {
         val prefs = PreferenceManager.getDefaultSharedPreferences(this)
         val numeroParent = prefs.getString("NUMERO_PARENT", "") ?: ""
         
-        if (numeroParent.isNotEmpty()) {
-            android.telephony.SmsManager.getDefault().sendTextMessage(
-                numeroParent, null, "PLUS DE TEMPS", null, null
-            )
-            tvDemandeTemps.visibility = View.VISIBLE
-        } else {
-            android.widget.Toast.makeText(this, "⚠️ Numéro parent non configuré", android.widget.Toast.LENGTH_SHORT).show()
+        if (numeroParent.isEmpty()) {
+            Toast.makeText(this, "⚠️ Numéro parent non configuré", Toast.LENGTH_SHORT).show()
+            return
         }
+        
+        SmsManager.getDefault().sendTextMessage(numeroParent, null, "PLUS DE TEMPS", null, null)
+        tvDemandeTemps.visibility = android.view.View.VISIBLE
+        Toast.makeText(this, "✅ Demande envoyée !", Toast.LENGTH_SHORT).show()
     }
     
     override fun onDestroy() {
