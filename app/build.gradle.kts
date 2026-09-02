@@ -32,5 +32,5 @@ dependencies {
     implementation("androidx.compose.ui:ui-tooling-preview")
     implementation("androidx.compose.material3:material3")
     implementation("androidx.compose.material:material-icons-core")
-    implementation("androidx.compose.material:material-icons-full")
+    implementation("androidx.compose.material:material-icons-extended")
 }
