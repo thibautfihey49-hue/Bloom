@@ -47,7 +47,7 @@ class EnvironmentMonitorService : Service() {
     override fun onCreate() {
         super.onCreate()
         createNotificationChannel()
-        startForeground(1, createNotification())  # ⚡ IMMÉDIAT — DANS LES 5s !
+        startForeground(1, createNotification())
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
