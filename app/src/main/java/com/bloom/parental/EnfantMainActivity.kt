@@ -42,10 +42,11 @@ class EnfantMainActivity : AppCompatActivity() {
         val maintenant = System.currentTimeMillis()
         val tempsRestant = tempsFin - maintenant
 
-        if (tempsRestant <= 0) {
-            txtTempsRestant.text = "⏹️ Temps écoulé"
-            txtTempsRestant.setTextColor(0xFFE53E3E.toInt())
-            txtStatut.text = "Demande du parent : accès coupé"
+        // ✅ Si temps infini ou > 1 an = afficher "Illimité"
+        if (tempsRestant <= 0 || tempsRestant > 31536000000L) {
+            txtTempsRestant.text = "⏳ Illimité"
+            txtTempsRestant.setTextColor(0xFF38A169.toInt())
+            txtStatut.text = "✅ En attente de la limite définie par le parent"
             btnDemanderTemps.isEnabled = true
             return
         }
@@ -58,13 +59,13 @@ class EnfantMainActivity : AppCompatActivity() {
             override fun onFinish() {
                 txtTempsRestant.text = "⏹️ Temps écoulé"
                 txtTempsRestant.setTextColor(0xFFE53E3E.toInt())
-                txtStatut.text = "Demande du parent : accès coupé"
+                txtStatut.text = "⏹️ Accès coupé par le parent"
                 btnDemanderTemps.isEnabled = true
             }
         }.start()
 
         mettreAJourAffichage(tempsRestant)
-        txtStatut.text = "✅ Connexion active — Contrôle par parent"
+        txtStatut.text = "✅ Temps d'écran actif"
     }
 
     private fun mettreAJourAffichage(ms: Long) {
@@ -78,11 +79,13 @@ class EnfantMainActivity : AppCompatActivity() {
             else -> "⏳ $heures h $minutes min restant"
         }
 
-        if (heures < 1) {
-            txtTempsRestant.setTextColor(0xFFED8936.toInt())
-        } else {
-            txtTempsRestant.setTextColor(0xFF38A169.toInt())
-        }
+        txtTempsRestant.setTextColor(
+            when {
+                heures <= 0 -> 0xFFE53E3E.toInt()
+                heures < 1 -> 0xFFED8936.toInt()
+                else -> 0xFF38A169.toInt()
+            }
+        )
     }
 
     private fun configurerBoutonDemande() {
