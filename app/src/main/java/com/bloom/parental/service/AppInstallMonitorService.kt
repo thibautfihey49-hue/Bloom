@@ -19,7 +19,8 @@ import kotlinx.coroutines.launch
 import org.json.JSONObject
 
 class AppInstallMonitorService : Service() {
-    private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+    private val job = SupervisorJob()
+    private val scope = CoroutineScope(Dispatchers.IO + job)
     private var lastPackages = mutableSetOf<String>()
     private val CHANNEL_ID = "bloom_install_monitor"
 
@@ -50,7 +51,7 @@ class AppInstallMonitorService : Service() {
 
     override fun onDestroy() {
         super.onDestroy()
-        scope.cancel()
+        job.cancel()
     }
 
     private fun createNotificationChannel() {
