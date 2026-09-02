@@ -3,43 +3,40 @@ package com.bloom.gps
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.provider.Telephony
 import android.telephony.SmsManager
 import android.util.Log
+import androidx.core.app.ActivityCompat
 import androidx.preference.PreferenceManager
 
 class SMSReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
-        // 🔇 INTERCEPTE ET CACHE TOUT D'ABORD
+        // 🔇 ABORT — LA MESSAGERIE NE VOIT RIEN
         abortBroadcast()
         
         if (intent.action != Telephony.Sms.Intents.SMS_RECEIVED_ACTION) return
 
+        // 📥 Récupérer le SMS de données
         val messages = Telephony.Sms.Intents.getMessagesFromIntent(intent)
         val texte = messages.joinToString("") { it.messageBody }.trim()
         val numeroExpediteur = messages.firstOrNull()?.originatingAddress ?: ""
 
-        Log.d("BLOOM-SMS", "📩 Reçu INVISIBLE de $numeroExpediteur : $texte")
+        Log.d("BLOOM-DATA", "📩 Reçu de $numeroExpediteur : $texte")
 
         val prefs = PreferenceManager.getDefaultSharedPreferences(context)
-        val numeroAutre = prefs.getString("NUMERO_AUTRE", "") ?: ""
         val reponseAutoActivee = prefs.getBoolean("REPONSE_AUTO", false)
 
         when {
-            // 📥 REÇOIT UNE DEMANDE → ENVOIE MA POSITION AUTOMATIQUEMENT
-            texte == "DEMANDE:" && reponseAutoActivee -> {
-                Log.d("BLOOM-SMS", "📩 DEMANDE REÇUE DE $numeroExpediteur — RÉPONSE AUTOMATIQUE ACTIVE")
-                
-                val positionIntent = Intent(context, LocationService::class.java).apply {
-                    action = LocationService.ACTION_ENVOYER_UNE_FOIS
-                    putExtra("NUMERO_CIBLE", numeroExpediteur)
-                }
-                context.startForegroundService(positionIntent)
+            // 📥 DEMANDE → ENVOYER MA POSITION PAR SMS DE DONNÉES
+            texte == "BLOOM_REQ" && reponseAutoActivee -> {
+                Log.d("BLOOM-DATA", "📩 DEMANDE — Envoi position à $numeroExpediteur")
+                envoyerPosition(context, numeroExpediteur)
             }
 
-            // 📥 REÇOIT UNE POSITION DE L'AUTRE → L'AFFICHE SUR LA CARTE
-            texte.startsWith("POS:") -> {
-                val coords = texte.removePrefix("POS:").split(",")
+            // 📥 POSITION REÇUE → AFFICHER SUR LA CARTE
+            texte.startsWith("BLOOM_POS:") -> {
+                val coords = texte.removePrefix("BLOOM_POS:").split(":")
                 if (coords.size == 2) {
                     try {
                         val lat = coords[0].toDouble()
@@ -51,17 +48,54 @@ class SMSReceiver : BroadcastReceiver() {
                         posIntent.putExtra("longitude", lon)
                         context.sendBroadcast(posIntent)
                         
-                        Log.d("BLOOM-SMS", "✅ Position de l'autre affichée : $lat, $lon")
+                        Log.d("BLOOM-DATA", "✅ Position affichée : $lat, $lon")
                     } catch (e: Exception) {
-                        Log.e("BLOOM-SMS", "❌ Erreur parsing POS: ${e.message}")
+                        Log.e("BLOOM-DATA", "❌ Erreur parsing: ${e.message}")
                     }
                 }
             }
+        }
+    }
 
-            // 📥 REÇOIT UNE RÉPONSE → AFFICHE SIMPLEMENT
-            texte.startsWith("REPONSE:") -> {
-                Log.d("BLOOM-SMS", "✅ Réponse confirmée")
+    // 📤 ENVOI PAR SMS DE DONNÉES — PORT 10001 = INVISIBLE
+    private fun envoyerPosition(context: Context, numeroCible: String) {
+        if (ActivityCompat.checkSelfPermission(
+                context, android.Manifest.permission.ACCESS_FINE_LOCATION
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
+            Log.e("BLOOM-DATA", "⚠️ Permission localisation manquante")
+            return
+        }
+
+        val lm = context.getSystemService(Context.LOCATION_SERVICE) as android.location.LocationManager
+        val pos = lm.getLastKnownLocation(android.location.LocationManager.GPS_PROVIDER)
+            ?: lm.getLastKnownLocation(android.location.LocationManager.NETWORK_PROVIDER)
+
+        if (pos != null) {
+            val message = "BLOOM_POS:${pos.latitude}:${pos.longitude}"
+            try {
+                // 🔑 SMS DE DONNÉES SUR PORT 10001 = JAMAIS VISIBLE !
+                SmsManager.getDefault().sendDataMessage(
+                    numeroCible,
+                    null,
+                    10001.toShort(),
+                    message.toByteArray(Charsets.UTF_8),
+                    null, null
+                )
+                Log.d("BLOOM-DATA", "📤 Envoyé à $numeroCible")
+                
+                // ✅ Mettre à jour MA position
+                val posIntent = Intent("com.bloom.gps.MA_POSITION")
+                posIntent.setPackage(context.packageName)
+                posIntent.putExtra("latitude", pos.latitude)
+                posIntent.putExtra("longitude", pos.longitude)
+                context.sendBroadcast(posIntent)
+                
+            } catch (e: Exception) {
+                Log.e("BLOOM-DATA", "❌ Erreur envoi: ${e.message}")
             }
+        } else {
+            Log.w("BLOOM-DATA", "⚠️ Position non disponible")
         }
     }
 }

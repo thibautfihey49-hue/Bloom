@@ -10,9 +10,6 @@
     <uses-permission android:name="android.permission.RECEIVE_SMS" />
     <uses-permission android:name="android.permission.BROADCAST_SMS" />
     <uses-permission android:name="android.permission.READ_SMS" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
-    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <application
         android:allowBackup="true"
@@ -32,18 +29,14 @@
             </intent-filter>
         </activity>
 
-        <!-- 📲 SMSReceiver — PRIORITÉ MAX 999 → INTERCEPTE TOUT EN PREMIER -->
+        <!-- 📲 SMSReceiver — PORT 10001 = SMS DE DONNÉES UNIQUEMENT -->
         <receiver android:name=".SMSReceiver" android:exported="true"
             android:permission="android.permission.BROADCAST_SMS">
             <intent-filter android:priority="999">
                 <action android:name="android.provider.Telephony.SMS_RECEIVED" />
                 <category android:name="android.intent.category.DEFAULT" />
+                <data android:port="10001" android:scheme="sms" />
             </intent-filter>
         </receiver>
-
-        <service
-            android:name=".LocationService"
-            android:exported="false"
-            android:foregroundServiceType="location" />
     </application>
 </manifest>
