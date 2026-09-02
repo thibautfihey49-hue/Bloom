@@ -22,7 +22,6 @@
     
     <!-- Services & Notifications -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.INTERNET" />
@@ -62,11 +61,11 @@
             </intent-filter>
         </receiver>
 
-        <!-- Services avec type déclaré pour Android 14+ -->
+        <!-- ✅ Types STANDARD — reconnus par Android -->
         <service
             android:name=".AppMonitorService"
             android:exported="false"
-            android:foregroundServiceType="specialUse" />
+            android:foregroundServiceType="mediaProjection" />
 
         <service
             android:name=".LocationService"

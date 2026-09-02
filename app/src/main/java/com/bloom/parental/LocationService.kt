@@ -56,15 +56,8 @@ class LocationService : Service(), LocationListener {
             .setOngoing(true)
             .build()
 
-        when {
-            Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE -> {
-                // FOREGROUND_SERVICE_TYPE_LOCATION = 8
-                startForeground(1002, notification, 8)
-            }
-            Build.VERSION.SDK_INT >= Build.VERSION_CODES.O -> {
-                startForeground(1002, notification)
-            }
-        }
+        // ✅ PAS de 3e paramètre — utilise celui du Manifest automatiquement
+        startForeground(1002, notification)
     }
 
     private fun demanderMisesAJourPosition() {

@@ -52,15 +52,8 @@ class AppMonitorService : Service() {
 
     private fun demarrerServicePremierPlan() {
         val notif = creerNotification()
-        when {
-            Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE -> {
-                // FOREGROUND_SERVICE_TYPE_SPECIAL_USE = 64
-                startForeground(1001, notif, 64)
-            }
-            Build.VERSION.SDK_INT >= Build.VERSION_CODES.O -> {
-                startForeground(1001, notif)
-            }
-        }
+        // ✅ PAS de 3e paramètre — utilise celui du Manifest automatiquement
+        startForeground(1001, notif)
     }
 
     private fun verifierBlocage() {
