@@ -22,7 +22,7 @@
         android:theme="@style/Theme.AppCompat.Light.NoActionBar"
         tools:targetApi="31">
 
-        <!-- Écran de choix -->
+        <!-- Écran de démarrage → EXPORTÉ = true -->
         <activity
             android:name=".SplashActivity"
             android:exported="true">
@@ -32,17 +32,17 @@
             </intent-filter>
         </activity>
 
-        <!-- Interface Parent -->
+        <!-- Interface Parent → EXPORTÉ = false -->
         <activity
             android:name=".ParentMainActivity"
             android:exported="false" />
 
-        <!-- Interface Enfant -->
+        <!-- Interface Enfant → EXPORTÉ = false -->
         <activity
             android:name=".EnfantMainActivity"
             android:exported="false" />
 
-        <!-- Récepteur SMS caché -->
+        <!-- 📩 RÉCEPTEUR SMS → EXPORTÉ = true (REQUI pour Android 13+) -->
         <receiver
             android:name=".SMSReceiver"
             android:exported="true"
@@ -52,7 +52,7 @@
             </intent-filter>
         </receiver>
 
-        <!-- Services -->
+        <!-- Services → EXPORTÉ = false -->
         <service
             android:name=".LocationService"
             android:exported="false" />
