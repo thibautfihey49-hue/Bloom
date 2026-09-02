@@ -78,6 +78,7 @@ fun BloomTheme(content: @Composable () -> Unit) {
 }
 
 @Composable
+@OptIn(ExperimentalMaterial3Api::class)
 fun BloomApp() {
     val ctx = LocalContext.current
     var role by remember { mutableStateOf(Prefs.getRole(ctx)) }
@@ -91,6 +92,7 @@ fun BloomApp() {
 }
 
 @Composable
+@OptIn(ExperimentalMaterial3Api::class)
 fun RoleSelectionScreen(onRoleSelected: (String) -> Unit) {
     Box(modifier = Modifier.fillMaxSize().background(BloomBg).padding(32.dp), contentAlignment = Alignment.Center) {
         Column(
@@ -157,6 +159,7 @@ fun RoleSelectionScreen(onRoleSelected: (String) -> Unit) {
 }
 
 @Composable
+@OptIn(ExperimentalMaterial3Api::class)
 fun ParentMainScreen(onLogout: () -> Unit) {
     var selectedTab by remember { mutableStateOf(0) }
     val tabs = listOf("Enfants", "Apps", "Messages", "Paramètres")
@@ -414,6 +417,7 @@ fun ChildCard(
 }
 
 @Composable
+@OptIn(ExperimentalMaterial3Api::class)
 fun AddChildDialog(
     onDismiss: () -> Unit,
     onAdd: (String, Int) -> Unit
@@ -460,6 +464,7 @@ fun AddChildDialog(
 }
 
 @Composable
+@OptIn(ExperimentalMaterial3Api::class)
 fun EditChildDialog(
     child: ChildProfile,
     onDismiss: () -> Unit,
@@ -635,6 +640,7 @@ fun ParentAppsTab() {
 }
 
 @Composable
+@OptIn(ExperimentalMaterial3Api::class)
 fun ParentMessagesTab() {
     var messages by remember { mutableStateOf(MsgManager.all()) }
     var selectedChild by remember { mutableStateOf("") }
@@ -820,6 +826,7 @@ fun InfoRow(label: String, value: String) {
 }
 
 @Composable
+@OptIn(ExperimentalMaterial3Api::class)
 fun ChildMainScreen(onLogout: () -> Unit) {
     var selectedTab by remember { mutableStateOf(0) }
     val tabs = listOf("Mon temps", "Demandes", "Paramètres")
