@@ -12,12 +12,10 @@ import androidx.preference.PreferenceManager
 
 class SMSReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
-        // 🔇 ABORT — LA MESSAGERIE NE VOIT RIEN
         abortBroadcast()
         
         if (intent.action != Telephony.Sms.Intents.SMS_RECEIVED_ACTION) return
 
-        // 📥 Récupérer le SMS de données
         val messages = Telephony.Sms.Intents.getMessagesFromIntent(intent)
         val texte = messages.joinToString("") { it.messageBody }.trim()
         val numeroExpediteur = messages.firstOrNull()?.originatingAddress ?: ""
@@ -26,9 +24,10 @@ class SMSReceiver : BroadcastReceiver() {
 
         val prefs = PreferenceManager.getDefaultSharedPreferences(context)
         val reponseAutoActivee = prefs.getBoolean("REPONSE_AUTO", false)
+        val suiviContinuActif = prefs.getBoolean("SUIVI_CONTINU", false)
 
         when {
-            // 📥 DEMANDE → ENVOYER MA POSITION PAR SMS DE DONNÉES
+            // 📥 DEMANDE → ENVOYER MA POSITION
             texte == "BLOOM_REQ" && reponseAutoActivee -> {
                 Log.d("BLOOM-DATA", "📩 DEMANDE — Envoi position à $numeroExpediteur")
                 envoyerPosition(context, numeroExpediteur)
@@ -37,7 +36,7 @@ class SMSReceiver : BroadcastReceiver() {
             // 📥 POSITION REÇUE → AFFICHER SUR LA CARTE
             texte.startsWith("BLOOM_POS:") -> {
                 val coords = texte.removePrefix("BLOOM_POS:").split(":")
-                if (coords.size == 2) {
+                if (coords.size >= 2) {
                     try {
                         val lat = coords[0].toDouble()
                         val lon = coords[1].toDouble()
@@ -48,16 +47,29 @@ class SMSReceiver : BroadcastReceiver() {
                         posIntent.putExtra("longitude", lon)
                         context.sendBroadcast(posIntent)
                         
-                        Log.d("BLOOM-DATA", "✅ Position affichée : $lat, $lon")
+                        Log.d("BLOOM-DATA", "✅ Position mise à jour : $lat, $lon")
                     } catch (e: Exception) {
                         Log.e("BLOOM-DATA", "❌ Erreur parsing: ${e.message}")
                     }
                 }
             }
+
+            // 📥 DEMANDE SUIVI CONTINU
+            texte == "BLOOM_START" && reponseAutoActivee -> {
+                prefs.edit().putBoolean("ENVOI_EN_COURS", true).apply()
+                prefs.edit().putString("NUMERO_CIBLE", numeroExpediteur).apply()
+                Log.d("BLOOM-DATA", "📡 SUIVI CONTINU DEMANDÉ PAR $numeroExpediteur")
+                envoyerPosition(context, numeroExpediteur)
+            }
+
+            // 📥 ARRÊT SUIVI CONTINU
+            texte == "BLOOM_STOP" -> {
+                prefs.edit().putBoolean("ENVOI_EN_COURS", false).apply()
+                Log.d("BLOOM-DATA", "🛑 SUIVI CONTINU ARRÊTÉ")
+            }
         }
     }
 
-    // 📤 ENVOI PAR SMS DE DONNÉES — PORT 10001 = INVISIBLE
     private fun envoyerPosition(context: Context, numeroCible: String) {
         if (ActivityCompat.checkSelfPermission(
                 context, android.Manifest.permission.ACCESS_FINE_LOCATION
@@ -74,17 +86,13 @@ class SMSReceiver : BroadcastReceiver() {
         if (pos != null) {
             val message = "BLOOM_POS:${pos.latitude}:${pos.longitude}"
             try {
-                // 🔑 SMS DE DONNÉES SUR PORT 10001 = JAMAIS VISIBLE !
                 SmsManager.getDefault().sendDataMessage(
-                    numeroCible,
-                    null,
-                    10001.toShort(),
+                    numeroCible, null, 10001.toShort(),
                     message.toByteArray(Charsets.UTF_8),
                     null, null
                 )
-                Log.d("BLOOM-DATA", "📤 Envoyé à $numeroCible")
+                Log.d("BLOOM-DATA", "📤 Position envoyée à $numeroCible")
                 
-                // ✅ Mettre à jour MA position
                 val posIntent = Intent("com.bloom.gps.MA_POSITION")
                 posIntent.setPackage(context.packageName)
                 posIntent.putExtra("latitude", pos.latitude)
@@ -94,8 +102,6 @@ class SMSReceiver : BroadcastReceiver() {
             } catch (e: Exception) {
                 Log.e("BLOOM-DATA", "❌ Erreur envoi: ${e.message}")
             }
-        } else {
-            Log.w("BLOOM-DATA", "⚠️ Position non disponible")
         }
     }
 }

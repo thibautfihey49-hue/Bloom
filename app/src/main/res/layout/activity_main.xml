@@ -35,6 +35,14 @@
             android:text="🔴 LUI: —"
             android:textSize="11sp"
             android:textColor="@color/red_500"/>
+
+        <TextView
+            android:id="@+id/tvDistance"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="📡 Dernier envoi: —"
+            android:textSize="10sp"
+            android:textColor="@color/orange_500"/>
     </LinearLayout>
 
     <org.osmdroid.views.MapView
@@ -95,31 +103,31 @@
             android:layout_height="45dp"
             android:layout_weight="1"
             android:text="🔑 Permissions"
-            android:textSize="11sp"
+            android:textSize="10sp"
             android:backgroundTint="@color/purple_500"
-            android:layout_marginEnd="3dp"/>
+            android:layout_marginEnd="2dp"/>
 
         <Button
             android:id="@+id/btnDemander"
             android:layout_width="0dp"
             android:layout_height="45dp"
             android:layout_weight="1"
-            android:text="📥 Lui demander"
-            android:textSize="11sp"
+            android:text="📥 Demander"
+            android:textSize="10sp"
             android:backgroundTint="@color/red_500"
-            android:layout_marginStart="3dp"
-            android:layout_marginEnd="3dp"/>
+            android:layout_marginStart="2dp"
+            android:layout_marginEnd="2dp"/>
 
         <Button
             android:id="@+id/btnRepondre"
             android:layout_width="0dp"
             android:layout_height="45dp"
             android:layout_weight="1"
-            android:text="📤 Lui répondre"
-            android:textSize="11sp"
+            android:text="📤 Répondre"
+            android:textSize="10sp"
             android:backgroundTint="@color/green_500"
-            android:layout_marginStart="3dp"
-            android:layout_marginEnd="3dp"/>
+            android:layout_marginStart="2dp"
+            android:layout_marginEnd="2dp"/>
 
         <Button
             android:id="@+id/btnSuivre"
@@ -127,9 +135,20 @@
             android:layout_height="45dp"
             android:layout_weight="1"
             android:text="🔄 Réponse auto"
-            android:textSize="11sp"
+            android:textSize="10sp"
             android:backgroundTint="@color/orange_500"
-            android:layout_marginStart="3dp"/>
+            android:layout_marginStart="2dp"
+            android:layout_marginEnd="2dp"/>
+
+        <Button
+            android:id="@+id/btnSuiviContinu"
+            android:layout_width="0dp"
+            android:layout_height="45dp"
+            android:layout_weight="1"
+            android:text="📡 Suivi continu"
+            android:textSize="10sp"
+            android:backgroundTint="@color/blue_500"
+            android:layout_marginStart="2dp"/>
     </LinearLayout>
 
 </LinearLayout>

@@ -1,6 +1,7 @@
 package com.bloom.gps
 
 import android.Manifest
+import android.app.AlertDialog
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -24,6 +25,7 @@ import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.Marker
+import kotlin.math.roundToInt
 
 class MainActivity : AppCompatActivity(), LocationListener {
     
@@ -31,12 +33,14 @@ class MainActivity : AppCompatActivity(), LocationListener {
     private lateinit var tvStatut: TextView
     private lateinit var tvMoi: TextView
     private lateinit var tvLui: TextView
+    private lateinit var tvDistance: TextView
     private lateinit var etMonNumero: EditText
     private lateinit var etAutreNumero: EditText
     private lateinit var btnPermissions: Button
     private lateinit var btnDemander: Button
     private lateinit var btnRepondre: Button
     private lateinit var btnSuivre: Button
+    private lateinit var btnSuiviContinu: Button
     
     private var marqueurMoi: Marker? = null
     private var marqueurLui: Marker? = null
@@ -44,6 +48,9 @@ class MainActivity : AppCompatActivity(), LocationListener {
     
     private val PERMISSIONS_REQUEST = 1001
     private var reponseAutoActivee = false
+    private var suiviContinuActif = false
+    private var dernierePosition: Location? = null
+    private var derniereDistanceEnvoi = 0f  // Compteur pour les 10 mètres
 
     private val maPositionReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
@@ -85,12 +92,14 @@ class MainActivity : AppCompatActivity(), LocationListener {
         tvStatut = findViewById(R.id.tvStatut)
         tvMoi = findViewById(R.id.tvMoi)
         tvLui = findViewById(R.id.tvLui)
+        tvDistance = findViewById(R.id.tvDistance)
         etMonNumero = findViewById(R.id.etMonNumero)
         etAutreNumero = findViewById(R.id.etAutreNumero)
         btnPermissions = findViewById(R.id.btnPermissions)
         btnDemander = findViewById(R.id.btnDemander)
         btnRepondre = findViewById(R.id.btnRepondre)
         btnSuivre = findViewById(R.id.btnSuivre)
+        btnSuiviContinu = findViewById(R.id.btnSuiviContinu)
     }
 
     private fun chargerNumeros() {
@@ -98,13 +107,14 @@ class MainActivity : AppCompatActivity(), LocationListener {
         etMonNumero.setText(prefs.getString("MON_NUM", ""))
         etAutreNumero.setText(prefs.getString("AUTRE_NUM", ""))
         reponseAutoActivee = prefs.getBoolean("REP_AUTO", false)
-        mettreAJourBoutonSuivre()
+        suiviContinuActif = prefs.getBoolean("SUIVI_CONTINU", false)
+        mettreAJourBoutons()
     }
 
     private fun configurerCarte() {
         mapView.setTileSource(TileSourceFactory.MAPNIK)
         mapView.setMultiTouchControls(true)
-        mapView.controller.setZoom(12.0)
+        mapView.controller.setZoom(15.0)
         mapView.controller.setCenter(GeoPoint(47.4784, -0.5632))
         tvStatut.text = "✅ Prêt — entrez les numéros"
     }
@@ -114,22 +124,42 @@ class MainActivity : AppCompatActivity(), LocationListener {
                 this, Manifest.permission.ACCESS_FINE_LOCATION
             ) != PackageManager.PERMISSION_GRANTED
         ) return
+        // 📡 Mise à jour TOUTES LES 1 SECONDE ou TOUS LES 1 MÈTRE
         locationManager.requestLocationUpdates(
-            LocationManager.GPS_PROVIDER, 30000, 50f, this
+            LocationManager.GPS_PROVIDER, 1000, 1f, this
         )
         locationManager.requestLocationUpdates(
-            LocationManager.NETWORK_PROVIDER, 30000, 50f, this
+            LocationManager.NETWORK_PROVIDER, 1000, 1f, this
         )
     }
 
-    override fun onLocationChanged(location: Location) {
-        mettreAJourMoi(location.latitude, location.longitude)
+    override fun onLocationChanged(nouvellePosition: Location) {
+        mettreAJourMoi(nouvellePosition.latitude, nouvellePosition.longitude)
+        
+        // 📡 SUIVI CONTINU : Envoyer seulement si on a bougé de 10m
+        if (suiviContinuActif && dernierePosition != null) {
+            val distance = nouvellePosition.distanceTo(dernierePosition!!)
+            derniereDistanceEnvoi += distance
+            
+            tvDistance.text = "📡 Déplacement: ${derniereDistanceEnvoi.roundToInt()}m / 10m"
+            
+            // ✅ Envoyer quand on a atteint 10 mètres
+            if (derniereDistanceEnvoi >= 10f) {
+                envoyerPositionSuiviContinu(nouvellePosition)
+                derniereDistanceEnvoi = 0f  // Réinitialiser
+            }
+        } else if (dernierePosition == null) {
+            // Première position — sauvegarder sans envoyer
+            derniereDistanceEnvoi = 0f
+        }
+        
+        dernierePosition = nouvellePosition
     }
 
     private fun configurerBoutons() {
         btnPermissions.setOnClickListener { demanderPermissions() }
         
-        // 📥 DEMANDER SA POSITION
+        // 📥 DEMANDER SA POSITION UNE FOIS
         btnDemander.setOnClickListener {
             val num = etAutreNumero.text.toString().trim()
             if (num.isEmpty()) {
@@ -140,7 +170,6 @@ class MainActivity : AppCompatActivity(), LocationListener {
                 .edit().putString("AUTRE_NUM", num).apply()
             
             try {
-                // 🔑 SMS DE DONNÉES — INVISIBLE
                 SmsManager.getDefault().sendDataMessage(
                     num, null, 10001.toShort(),
                     "BLOOM_REQ".toByteArray(Charsets.UTF_8),
@@ -153,7 +182,7 @@ class MainActivity : AppCompatActivity(), LocationListener {
             }
         }
 
-        // 📤 RÉPONDRE — ENVOYER MA POSITION
+        // 📤 RÉPONDRE UNE FOIS
         btnRepondre.setOnClickListener {
             val num = etAutreNumero.text.toString().trim()
             if (num.isEmpty()) {
@@ -166,7 +195,7 @@ class MainActivity : AppCompatActivity(), LocationListener {
             envoyerMaPosition(num)
         }
 
-        // 🔄 RÉPONSE AUTOMATIQUE
+        // 🔄 RÉPONSE AUX DEMANDES
         btnSuivre.setOnClickListener {
             val num = etAutreNumero.text.toString().trim()
             if (num.isEmpty()) {
@@ -180,7 +209,7 @@ class MainActivity : AppCompatActivity(), LocationListener {
             PreferenceManager.getDefaultSharedPreferences(this)
                 .edit().putBoolean("REP_AUTO", reponseAutoActivee).apply()
             
-            mettreAJourBoutonSuivre()
+            mettreAJourBoutons()
             
             if (reponseAutoActivee) {
                 Toast.makeText(this, "🔄 RÉPONSE AUTO ACTIVE — Il demande → tu réponds TOUT SEUL", Toast.LENGTH_LONG).show()
@@ -189,6 +218,73 @@ class MainActivity : AppCompatActivity(), LocationListener {
                 Toast.makeText(this, "🛑 Réponse auto désactivée", Toast.LENGTH_SHORT).show()
                 tvStatut.text = "⏳ Réponse auto désactivée"
             }
+        }
+
+        // 📡 SUIVI CONTINU — ENVOI TOUTES LES 10 MÈTRES
+        btnSuiviContinu.setOnClickListener {
+            val num = etAutreNumero.text.toString().trim()
+            if (num.isEmpty()) {
+                Toast.makeText(this, "⚠️ Entrez le numéro de l'abord !", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+            PreferenceManager.getDefaultSharedPreferences(this)
+                .edit().putString("AUTRE_NUM", num).apply()
+            
+            suiviContinuActif = !suiviContinuActif
+            PreferenceManager.getDefaultSharedPreferences(this)
+                .edit().putBoolean("SUIVI_CONTINU", suiviContinuActif).apply()
+            
+            derniereDistanceEnvoi = 0f
+            dernierePosition = null
+            
+            mettreAJourBoutons()
+            
+            if (suiviContinuActif) {
+                AlertDialog.Builder(this)
+                    .setTitle("📡 SUIVI CONTINU ACTIVÉ")
+                    .setMessage("✅ Votre position sera envoyée automatiquement TOUTES LES 10 MÈTRES à :\n$num\n\n🕵️ Invisible — rien dans la messagerie !")
+                    .setPositiveButton("OK") { _, _ -> }
+                    .show()
+                tvStatut.text = "📡 SUIVI CONTINU ACTIF — Envoi toutes les 10m"
+                // 📡 Prévenir l'autre téléphone que le suivi commence
+                try {
+                    SmsManager.getDefault().sendDataMessage(
+                        num, null, 10001.toShort(),
+                        "BLOOM_START".toByteArray(Charsets.UTF_8),
+                        null, null
+                    )
+                } catch (e: Exception) {}
+            } else {
+                Toast.makeText(this, "🛑 SUIVI CONTINU ARRÊTÉ", Toast.LENGTH_SHORT).show()
+                tvStatut.text = "⏳ Suivi continu arrêté"
+                tvDistance.text = "📡 Dernier envoi: —"
+                // 📡 Prévenir l'autre téléphone que le suivi s'arrête
+                try {
+                    SmsManager.getDefault().sendDataMessage(
+                        num, null, 10001.toShort(),
+                        "BLOOM_STOP".toByteArray(Charsets.UTF_8),
+                        null, null
+                    )
+                } catch (e: Exception) {}
+            }
+        }
+    }
+
+    private fun envoyerPositionSuiviContinu(pos: Location) {
+        val num = etAutreNumero.text.toString().trim()
+        if (num.isEmpty()) return
+
+        val message = "BLOOM_POS:${pos.latitude}:${pos.longitude}"
+        try {
+            SmsManager.getDefault().sendDataMessage(
+                num, null, 10001.toShort(),
+                message.toByteArray(Charsets.UTF_8),
+                null, null
+            )
+            tvDistance.text = "✅ ENVOYÉ ! Nouvelle position à ${pos.latitude}, ${pos.longitude}"
+            tvStatut.text = "📡 Envoi automatique — OK"
+        } catch (e: Exception) {
+            tvDistance.text = "❌ Erreur envoi: ${e.message}"
         }
     }
 
@@ -223,13 +319,21 @@ class MainActivity : AppCompatActivity(), LocationListener {
         }
     }
 
-    private fun mettreAJourBoutonSuivre() {
+    private fun mettreAJourBoutons() {
         if (reponseAutoActivee) {
             btnSuivre.text = "🔄 ACTIF"
             btnSuivre.setBackgroundColor(Color.parseColor("#10B981"))
         } else {
             btnSuivre.text = "🔄 Réponse auto"
             btnSuivre.setBackgroundColor(Color.parseColor("#F59E0B"))
+        }
+
+        if (suiviContinuActif) {
+            btnSuiviContinu.text = "📡 ACTIF"
+            btnSuiviContinu.setBackgroundColor(Color.parseColor("#10B981"))
+        } else {
+            btnSuiviContinu.text = "📡 Suivi continu"
+            btnSuiviContinu.setBackgroundColor(Color.parseColor("#2563EB"))
         }
     }
 
@@ -256,6 +360,7 @@ class MainActivity : AppCompatActivity(), LocationListener {
             arrayOf(
                 Manifest.permission.INTERNET,
                 Manifest.permission.ACCESS_FINE_LOCATION,
+                Manifest.permission.ACCESS_BACKGROUND_LOCATION,
                 Manifest.permission.SEND_SMS,
                 Manifest.permission.RECEIVE_SMS,
                 Manifest.permission.READ_SMS
@@ -305,14 +410,14 @@ class MainActivity : AppCompatActivity(), LocationListener {
                 position = point
                 title = "📍 LUI"
                 setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
-                icon = getDrawable(android.R.drawable.ic_menu_myplaces)
+                icon = getDrawable(android.R.drawable.ic_menu_mylocation)
             }
             mapView.overlays.add(marqueurLui)
         } else {
             marqueurLui!!.position = point
         }
         tvLui.text = "🔴 LUI: ${String.format("%.6f", lat)}, ${String.format("%.6f", lon)}"
-        tvStatut.text = "✅ Position de l'autre reçue !"
+        tvStatut.text = "✅ Position de l'autre mise à jour !"
         mapView.invalidate()
     }
 
@@ -324,4 +429,8 @@ class MainActivity : AppCompatActivity(), LocationListener {
         unregisterReceiver(autrePositionReceiver)
         locationManager.removeUpdates(this)
     }
+
+    override fun onStatusChanged(p0: String?, p1: Int, p2: Bundle?) {}
+    override fun onProviderEnabled(p0: String) {}
+    override fun onProviderDisabled(p0: String) {}
 }
