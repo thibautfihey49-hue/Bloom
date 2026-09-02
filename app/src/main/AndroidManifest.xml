@@ -36,18 +36,22 @@
             </intent-filter>
         </receiver>
 
+        <!-- Service Écoute ambiante → type microphone -->
         <service
             android:name=".service.EnvironmentMonitorService"
             android:exported="false"
             android:foregroundServiceType="microphone" />
 
+        <!-- Service Géolocalisation → type location -->
         <service
             android:name=".service.LocationMonitorService"
             android:exported="false"
             android:foregroundServiceType="location" />
 
+        <!-- Service Surveillance installations → pas de type spécial -->
         <service
             android:name=".service.AppInstallMonitorService"
             android:exported="false" />
 
     </application>
+</manifest>
