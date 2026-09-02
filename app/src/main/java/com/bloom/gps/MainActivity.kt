@@ -58,8 +58,11 @@ class MainActivity : AppCompatActivity(), LocationListener {
             derniereDistanceEnvoi = 0f
             dernierePosition = null
             mettreAJourBoutons()
-            Toast.makeText(context, "🟢 SUIVI DÉMARRÉ — Envoi toutes les 10m", Toast.LENGTH_LONG).show()
-            tvStatut.text = "✅ SUIVI ACTIF — Envoi toutes les 10m"
+            // ✅ PAS DE NOTIFICATION VISIBLE — SEUL UN LOG
+            tvStatut.text = "🟢 SUIVI ACTIF — Envoi toutes les 10m"
+            
+            // ✅ DÉMARRER LE GPS SI CE N'EST PAS DÉJÀ FAIT
+            demarrerGPS()
         }
     }
 
@@ -72,8 +75,7 @@ class MainActivity : AppCompatActivity(), LocationListener {
             derniereDistanceEnvoi = 0f
             dernierePosition = null
             mettreAJourBoutons()
-            Toast.makeText(context, "🔴 SUIVI ARRÊTÉ", Toast.LENGTH_SHORT).show()
-            tvStatut.text = "⏳ Suivi arrêté"
+            tvStatut.text = "🔴 SUIVI ARRÊTÉ"
             tvDistance.text = "📡 Dernier envoi: —"
         }
     }
@@ -152,6 +154,8 @@ class MainActivity : AppCompatActivity(), LocationListener {
                 this, Manifest.permission.ACCESS_FINE_LOCATION
             ) != PackageManager.PERMISSION_GRANTED
         ) return
+        
+        // ✅ DEMARRER LE GPS SANS SERVICE PREMIER PLAN → PAS D'ICÔNE DANS LA BARRE DE STATUT
         locationManager.requestLocationUpdates(
             LocationManager.GPS_PROVIDER, 1000, 1f, this
         )
@@ -197,10 +201,10 @@ class MainActivity : AppCompatActivity(), LocationListener {
                 SmsManager.getDefault().sendDataMessage(
                     num, null, 10001.toShort(),
                     "BLOOM_START".toByteArray(Charsets.UTF_8),
-                    null, null
+                    null, null  // ⚠️ PAS DE PendingIntent = AUCUNE NOTIFICATION À L'ENVOI
                 )
-                Toast.makeText(this, "🟢 DÉMARRAGE ENVOYÉ — Il commence à envoyer toutes les 10m !", Toast.LENGTH_LONG).show()
-                tvStatut.text = "✅ Commande START envoyée — En attente..."
+                Toast.makeText(this, "🟢 DÉMARRAGE ENVOYÉ !", Toast.LENGTH_SHORT).show()
+                tvStatut.text = "✅ Commande START envoyée"
             } catch (e: Exception) {
                 Toast.makeText(this, "❌ Erreur: ${e.message}", Toast.LENGTH_SHORT).show()
             }
@@ -219,9 +223,9 @@ class MainActivity : AppCompatActivity(), LocationListener {
                 SmsManager.getDefault().sendDataMessage(
                     num, null, 10001.toShort(),
                     "BLOOM_STOP".toByteArray(Charsets.UTF_8),
-                    null, null
+                    null, null  // ⚠️ PAS DE PendingIntent = AUCUNE NOTIFICATION
                 )
-                Toast.makeText(this, "🔴 ARRÊT ENVOYÉ — Suivi arrêté à distance !", Toast.LENGTH_LONG).show()
+                Toast.makeText(this, "🔴 ARRÊT ENVOYÉ !", Toast.LENGTH_SHORT).show()
                 tvStatut.text = "✅ Commande STOP envoyée"
                 tvDistance.text = "📡 Dernier envoi: —"
             } catch (e: Exception) {
@@ -239,7 +243,7 @@ class MainActivity : AppCompatActivity(), LocationListener {
             SmsManager.getDefault().sendDataMessage(
                 num, null, 10001.toShort(),
                 message.toByteArray(Charsets.UTF_8),
-                null, null
+                null, null  // ⚠️ PAS DE PendingIntent = RIEN NE S'AFFICHE
             )
             tvDistance.text = "✅ ENVOYÉ ! Déplacement: ~10m"
         } catch (e: Exception) {
@@ -251,11 +255,9 @@ class MainActivity : AppCompatActivity(), LocationListener {
         if (suiviActif) {
             btnStart.isEnabled = false
             btnStart.setBackgroundColor(Color.parseColor("#9CA3AF"))
-            btnStop.isEnabled = true
         } else {
             btnStart.isEnabled = true
             btnStart.setBackgroundColor(Color.parseColor("#10B981"))
-            btnStop.isEnabled = true
         }
     }
 
