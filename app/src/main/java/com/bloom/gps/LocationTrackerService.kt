@@ -119,7 +119,6 @@ class LocationTrackerService : Service() {
             .setSmallIcon(android.R.drawable.ic_menu_mylocation)
             .setPriority(Notification.PRIORITY_LOW)
             .setOngoing(true)
-            .setSilent(true)
             .build()
     }
 
