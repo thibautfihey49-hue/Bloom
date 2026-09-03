@@ -3,7 +3,6 @@ package com.bloom.gps
 import android.Manifest
 import android.content.*
 import android.content.pm.PackageManager
-import android.graphics.Color
 import android.location.Location
 import android.location.LocationListener
 import android.location.LocationManager
@@ -38,6 +37,7 @@ class MainActivity : AppCompatActivity() {
     private var autreMarqueur: Marker? = null
     private lateinit var locationManager: LocationManager
     private val PORT = 50006
+    private var permissionsOk = false
 
     private val PERMISSIONS = arrayOf(
         Manifest.permission.INTERNET,
@@ -55,8 +55,8 @@ class MainActivity : AppCompatActivity() {
             val pt = GeoPoint(location.latitude, location.longitude)
             monMarqueur?.position = pt
             mapView.controller.setCenter(pt)
-            tvVitesse.text = "🟦 MA vitesse : ${(location.speed * 3.6).roundToInt()} km/h"
-            tvStatut.text = "✅ Position mise à jour"
+            tvVitesse.text = "🟦 Ma vitesse : ${(location.speed * 3.6).roundToInt()} km/h"
+            tvStatut.text = "✅ Position : %.4f, %.4f".format(location.latitude, location.longitude)
             mapView.invalidate()
         }
         override fun onStatusChanged(p0: String?, p1: Int, p2: Bundle?) {}
@@ -68,6 +68,15 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
         
+        try {
+            initialiserTout()
+        } catch (e: Exception) {
+            Toast.makeText(this, "❌ Erreur démarrage : ${e.message}", Toast.LENGTH_LONG).show()
+            e.printStackTrace()
+        }
+    }
+
+    private fun initialiserTout() {
         Configuration.getInstance().load(this, PreferenceManager.getDefaultSharedPreferences(this))
         
         tvStatut = findViewById(R.id.tvStatut)
@@ -86,27 +95,22 @@ class MainActivity : AppCompatActivity() {
         mapView.setMultiTouchControls(true)
         mapView.controller.setZoom(15.0)
 
-        // 🟦 MOI = BLEU
+        // 🟦 MOI = BLEU — SANS setTint (évite crash sur Xiaomi)
         monMarqueur = Marker(mapView)
         monMarqueur?.icon = ContextCompat.getDrawable(this, android.R.drawable.ic_menu_mylocation)
         monMarqueur?.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
         monMarqueur?.title = "🟦 MOI"
-        monMarqueur?.icon?.setTint(Color.BLUE)
         mapView.overlays.add(monMarqueur)
 
-        // 🟥 L'AUTRE = ROUGE
+        // 🟥 L'AUTRE = ROUGE — SANS setTint
         autreMarqueur = Marker(mapView)
-        autreMarqueur?.icon = ContextCompat.getDrawable(this, android.R.drawable.ic_menu_mylocation)
+        autreMarqueur?.icon = ContextCompat.getDrawable(this, android.R.drawable.ic_menu_compass)
         autreMarqueur?.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
         autreMarqueur?.title = "🟥 L'AUTRE"
-        autreMarqueur?.icon?.setTint(Color.RED)
         mapView.overlays.add(autreMarqueur)
 
         // 📍 GPS
         locationManager = getSystemService(Context.LOCATION_SERVICE) as LocationManager
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
-            locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 3000, 5f, monGpsListener)
-        }
 
         // 📡 Récepteur position de l'autre
         registerReceiver(autreUpdateReceiver, IntentFilter("BLOOMGPS_AUTRE_UPDATE"))
@@ -117,7 +121,21 @@ class MainActivity : AppCompatActivity() {
         btnStartDist.setOnClickListener { envoyerCommande("START") }
         btnStopDist.setOnClickListener { envoyerCommande("STOP") }
 
+        // ⚡ D'abord les PERMISSIONS !
         verifierPermissions()
+    }
+
+    private fun demarrerGPS() {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+            try {
+                locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 3000, 5f, monGpsListener)
+                tvStatut.text = "✅ GPS actif — En attente de position..."
+            } catch (e: Exception) {
+                tvStatut.text = "⚠️ GPS indisponible"
+            }
+        } else {
+            tvStatut.text = "⚠️ Autorisation GPS requise"
+        }
     }
 
     private val autreUpdateReceiver = object : BroadcastReceiver() {
@@ -127,10 +145,10 @@ class MainActivity : AppCompatActivity() {
                 val lon = intent.getDoubleExtra("lon", 0.0)
                 val vit = intent.getFloatExtra("speed", 0f)
                 autreMarqueur?.position = GeoPoint(lat, lon)
-                tvStatut.text = "🟥 Position de l'autre : %.4f, %.4f".format(lat, lon)
+                tvStatut.text = "🟥 Autre : %.4f, %.4f".format(lat, lon)
                 tvVitesse.text = "🟦 Ma vitesse | 🟥 Vitesse autre : ${(vit * 3.6).roundToInt()} km/h"
                 mapView.invalidate()
-                Toast.makeText(this@MainActivity, "📥 Position de l'autre reçue !", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this@MainActivity, "📥 Position reçue !", Toast.LENGTH_SHORT).show()
             }
         }
     }
@@ -143,6 +161,11 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun envoyerCommande(cmd: String) {
+        if (!permissionsOk) {
+            Toast.makeText(this, "⚠️ Accorde d'abord toutes les permissions", Toast.LENGTH_SHORT).show()
+            return
+        }
+        
         var num = etNumeroDest.text.toString().trim()
         if (num.isEmpty()) {
             Toast.makeText(this, "⚠️ Entrez un numéro", Toast.LENGTH_SHORT).show()
@@ -157,13 +180,18 @@ class MainActivity : AppCompatActivity() {
             SmsManager.getDefault().sendDataMessage(num, null, PORT.toShort(), contenu, null, null)
             Toast.makeText(this, "✅ Commande envoyée à $num", Toast.LENGTH_SHORT).show()
         } catch (e: Exception) {
-            Toast.makeText(this, "❌ Échec — Vérifiez la permission SMS", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, "❌ Échec : ${e.message}", Toast.LENGTH_SHORT).show()
         }
     }
 
     private fun demarrerLocal() {
+        if (!permissionsOk) {
+            Toast.makeText(this, "⚠️ Accorde d'abord toutes les permissions", Toast.LENGTH_SHORT).show()
+            return
+        }
         val intent = Intent(this, LocationTrackerService::class.java)
         intent.putExtra("commande", "START")
+        intent.putExtra("numero_dest", normaliserNumero(etNumeroDest.text.toString().trim()))
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) startForegroundService(intent)
         else startService(intent)
         Toast.makeText(this, "✅ Suivi démarré", Toast.LENGTH_SHORT).show()
@@ -178,21 +206,28 @@ class MainActivity : AppCompatActivity() {
 
     private fun verifierPermissions() {
         val manquantes = PERMISSIONS.filter {
-            ContextCompat.checkSelfPermission(this, it) != android.content.pm.PackageManager.PERMISSION_GRANTED
-        }.toTypedArray()
+            ContextCompat.checkSelfPermission(this, it) != PackageManager.PERMISSION_GRANTED
+        }.toMutableList()
         
-        if (manquantes.isNotEmpty()) {
-            ActivityCompat.requestPermissions(this, manquantes, 1001)
+        if (manquantes.isEmpty()) {
+            permissionsOk = true
+            demarrerGPS()
+        } else {
+            ActivityCompat.requestPermissions(this, manquantes.toTypedArray(), 1001)
         }
     }
 
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         if (requestCode == 1001) {
-            if (grantResults.all { it == android.content.pm.PackageManager.PERMISSION_GRANTED }) {
+            val toutesAccordees = grantResults.all { it == PackageManager.PERMISSION_GRANTED }
+            if (toutesAccordees) {
+                permissionsOk = true
                 Toast.makeText(this, "✅ Toutes les permissions accordées", Toast.LENGTH_SHORT).show()
+                demarrerGPS()
             } else {
-                Toast.makeText(this, "⚠️ Certaines permissions manquent", Toast.LENGTH_SHORT).show()
+                permissionsOk = false
+                Toast.makeText(this, "⚠️ Sans toutes les permissions, l'application ne fonctionnera pas", Toast.LENGTH_LONG).show()
             }
         }
     }

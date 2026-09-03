@@ -32,7 +32,6 @@
             </intent-filter>
         </activity>
 
-        <!-- 📡 SMS DE DONNÉES UNIQUEMENT -->
         <receiver 
             android:name=".DataSMSReceiver" 
             android:exported="true"

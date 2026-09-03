@@ -10,7 +10,6 @@ import android.location.Location
 import android.location.LocationListener
 import android.location.LocationManager
 import android.os.Build
-import android.os.Bundle
 import android.os.IBinder
 import android.telephony.SmsManager
 import android.util.Log
@@ -31,7 +30,6 @@ class LocationTrackerService : Service() {
                 premierEnvoi = true
                 return
             }
-            
             val dernier = dernierEnvoi
             if (dernier == null || location.distanceTo(dernier) >= 10) {
                 envoyerPosition(location)
@@ -47,8 +45,6 @@ class LocationTrackerService : Service() {
         val cmd = intent?.getStringExtra("commande") ?: return START_NOT_STICKY
         numeroDest = intent?.getStringExtra("numero_dest") ?: ""
         
-        Log.d("BloomGPS", "🔧 Service : $cmd vers $numeroDest")
-        
         when (cmd) {
             "START" -> demarrerSuivi()
             "STOP" -> arreterSuivi()
@@ -59,47 +55,35 @@ class LocationTrackerService : Service() {
     private fun demarrerSuivi() {
         creerCanalNotification()
         startForeground(1, creerNotification())
-        
         premierEnvoi = false
         dernierEnvoi = null
         
         locationManager = getSystemService(Context.LOCATION_SERVICE) as LocationManager
         try {
             locationManager?.requestLocationUpdates(
-                LocationManager.GPS_PROVIDER,
-                0,
-                10f,
-                locationListener
+                LocationManager.GPS_PROVIDER, 0, 10f, locationListener
             )
-            Log.d("BloomGPS", "✅ Suivi GPS actif — Envoi toutes les 10m")
+            Log.d("BloomGPS", "✅ Suivi actif")
         } catch (e: SecurityException) {
-            Log.e("BloomGPS", "❌ Permission GPS manquante", e)
+            Log.e("BloomGPS", "❌ Permission GPS", e)
             stopSelf()
         }
     }
 
     private fun envoyerPosition(location: Location) {
-        if (numeroDest.isEmpty()) {
-            Log.w("BloomGPS", "⚠️ Aucun numéro de destination !")
-            return
-        }
-        
+        if (numeroDest.isEmpty()) return
         val contenu = "BLOOMGPS:${location.latitude},${location.longitude},${location.speed}".toByteArray(Charsets.UTF_8)
         try {
             SmsManager.getDefault().sendDataMessage(numeroDest, null, PORT.toShort(), contenu, null, null)
-            Log.d("BloomGPS", "✅ Position envoyée : ${location.latitude}, ${location.longitude}")
         } catch (e: Exception) {
-            Log.e("BloomGPS", "❌ Échec envoi SMS de données", e)
+            Log.e("BloomGPS", "❌ Échec envoi", e)
         }
     }
 
     private fun arreterSuivi() {
-        try {
-            locationManager?.removeUpdates(locationListener)
-        } catch (e: Exception) {}
+        try { locationManager?.removeUpdates(locationListener) } catch (e: Exception) {}
         stopForeground(STOP_FOREGROUND_REMOVE)
         stopSelf()
-        Log.d("BloomGPS", "🛑 Suivi arrêté")
     }
 
     private fun creerCanalNotification() {
@@ -114,7 +98,7 @@ class LocationTrackerService : Service() {
     private fun creerNotification(): Notification {
         return Notification.Builder(this, CHANNEL_ID)
             .setContentTitle("Bloom GPS")
-            .setContentText("Suivi en cours — Envoi toutes les 10m")
+            .setContentText("Suivi en cours")
             .setSmallIcon(android.R.drawable.ic_menu_mylocation)
             .setPriority(Notification.PRIORITY_LOW)
             .setOngoing(true)

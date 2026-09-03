@@ -18,7 +18,7 @@ class DataSMSReceiver : BroadcastReceiver() {
         for (pdu in pdus) {
             try {
                 val message = String(pdu, StandardCharsets.UTF_8)
-                Log.d("BloomGPS", "📥 SMS de données reçu : $message")
+                Log.d("BloomGPS", "📥 SMS reçu : $message")
                 
                 when {
                     message.startsWith("BLOOMGPS:") -> {
@@ -48,7 +48,9 @@ class DataSMSReceiver : BroadcastReceiver() {
                         }
                     }
                 }
-            } catch (e: Exception) {}
+            } catch (e: Exception) {
+                Log.e("BloomGPS", "Erreur récepteur", e)
+            }
         }
     }
 }
