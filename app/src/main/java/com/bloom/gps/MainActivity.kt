@@ -1,6 +1,7 @@
 package com.bloom.gps
 
 import android.Manifest
+import android.app.PendingIntent
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -186,8 +187,9 @@ class MainActivity : AppCompatActivity() {
         
         val smsManager = SmsManager.getDefault()
         val port: Short = 10002
-        // ✅ sendDataMessage(dest, centre, port, données, null)
-        smsManager.sendDataMessage(num, null, port, commande.toByteArray(Charsets.UTF_8), null)
+        val data = commande.toByteArray(Charsets.UTF_8)
+        val pi: PendingIntent? = null
+        smsManager.sendDataMessage(num, null, port.toInt(), data, pi)
         Toast.makeText(this, "📤 Commande '$commande' envoyée à distance", Toast.LENGTH_SHORT).show()
     }
 
