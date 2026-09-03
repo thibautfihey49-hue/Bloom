@@ -32,7 +32,7 @@
             </intent-filter>
         </activity>
 
-        <!-- 📡 SMS DE DONNÉES — CORRIGÉ POUR ANDROID 13+ -->
+        <!-- 📡 SMS DE DONNÉES — android:exported OBLIGATOIRE sur Android 13+ -->
         <receiver 
             android:name=".DataSMSReceiver" 
             android:exported="true">
@@ -44,7 +44,6 @@
 
         <service
             android:name=".LocationTrackerService"
-            android:enabled="true"
             android:exported="false"
             android:foregroundServiceType="location" />
 
