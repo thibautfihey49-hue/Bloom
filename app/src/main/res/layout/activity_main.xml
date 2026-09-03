@@ -55,8 +55,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        android:layout_marginTop="12dp"
-        android:gap="8dp">
+        android:layout_marginTop="12dp">
 
         <Button
             android:id="@+id/btnStart"
@@ -66,7 +65,8 @@
             android:text="▶️ MOI — Démarrer"
             android:background="#4CAF50"
             android:textColor="#FFFFFF"
-            android:textSize="12sp"/>
+            android:textSize="12sp"
+            android:layout_marginEnd="4dp"/>
 
         <Button
             android:id="@+id/btnStop"
@@ -76,15 +76,15 @@
             android:text="⏹️ MOI — Arrêter"
             android:background="#F44336"
             android:textColor="#FFFFFF"
-            android:textSize="12sp"/>
+            android:textSize="12sp"
+            android:layout_marginStart="4dp"/>
     </LinearLayout>
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        android:layout_marginTop="8dp"
-        android:gap="8dp">
+        android:layout_marginTop="8dp">
 
         <Button
             android:id="@+id/btnStartDist"
@@ -94,7 +94,8 @@
             android:text="📤 À distance — Démarrer"
             android:background="#2196F3"
             android:textColor="#FFFFFF"
-            android:textSize="12sp"/>
+            android:textSize="12sp"
+            android:layout_marginEnd="4dp"/>
 
         <Button
             android:id="@+id/btnStopDist"
@@ -104,15 +105,15 @@
             android:text="📤 À distance — Arrêter"
             android:background="#FF9800"
             android:textColor="#FFFFFF"
-            android:textSize="12sp"/>
+            android:textSize="12sp"
+            android:layout_marginStart="4dp"/>
     </LinearLayout>
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        android:layout_marginTop="8dp"
-        android:gap="8dp">
+        android:layout_marginTop="8dp">
 
         <Button
             android:id="@+id/btnPermissions"
@@ -122,7 +123,8 @@
             android:text="🔑 Autorisations"
             android:background="#9C27B0"
             android:textColor="#FFFFFF"
-            android:textSize="11sp"/>
+            android:textSize="11sp"
+            android:layout_marginEnd="4dp"/>
 
         <Button
             android:id="@+id/btnNotif"
@@ -132,7 +134,8 @@
             android:text="🔔 Notifications"
             android:background="#607D8B"
             android:textColor="#FFFFFF"
-            android:textSize="11sp"/>
+            android:textSize="11sp"
+            android:layout_marginStart="4dp"/>
     </LinearLayout>
 
     <org.osmdroid.views.MapView
