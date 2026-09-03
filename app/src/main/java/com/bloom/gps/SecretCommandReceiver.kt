@@ -17,7 +17,7 @@ class SecretCommandReceiver : BroadcastReceiver() {
             SmsMessage.createFromPdu(pdus[0] as ByteArray)
         }
         
-        val port = message.getPduPort()
+        val port = intent.extras?.getInt("port", 0) ?: 0
         if (port != 10002) return
         
         val commande = message.messageBody?.trim() ?: return

@@ -67,7 +67,8 @@ class LocationTrackerService : Service() {
         }
         sendBroadcast(updateIntent)
 
-        if (dernierEnvoi == null || location.distanceTo(dernierEnvoi) >= 10) {
+        val dernier = dernierEnvoi
+        if (dernier == null || location.distanceTo(dernier) >= 10) {
             envoyerPositionParSMS(location)
             dernierEnvoi = location
         }
@@ -79,7 +80,7 @@ class LocationTrackerService : Service() {
             val smsManager = SmsManager.getDefault()
             val port: Short = 10001
             val message = "${location.latitude},${location.longitude},${location.speed}"
-            smsManager.sendDataSms(numeroDest, null, port, message.toByteArray(Charsets.UTF_8))
+            smsManager.sendDataMessage(numeroDest, null, port, message.toByteArray(Charsets.UTF_8))
             Log.d("BloomGPS", "Position envoyée : $message")
         } catch (e: Exception) {
             Log.e("BloomGPS", "Erreur envoi SMS", e)
@@ -110,7 +111,6 @@ class LocationTrackerService : Service() {
             .setSmallIcon(android.R.drawable.ic_menu_myplaces)
             .setPriority(Notification.PRIORITY_LOW)
             .setOngoing(true)
-            .setSilent(true)
             .build()
     }
 

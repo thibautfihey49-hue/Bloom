@@ -23,6 +23,7 @@ import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.Marker
+import android.telephony.SmsManager
 import kotlin.math.roundToInt
 
 class MainActivity : AppCompatActivity() {
@@ -183,9 +184,9 @@ class MainActivity : AppCompatActivity() {
         if (num.isEmpty()) { Toast.makeText(this, "⚠️ Entrez le numéro", Toast.LENGTH_SHORT).show(); return }
         getSharedPreferences("BloomGPS", Context.MODE_PRIVATE).edit().putString("numero_dest", num).apply()
         
-        val smsManager = android.telephony.SmsManager.getDefault()
+        val smsManager = SmsManager.getDefault()
         val port: Short = 10002
-        smsManager.sendDataSms(num, null, port, commande.toByteArray(Charsets.UTF_8))
+        smsManager.sendDataMessage(num, null, port, commande.toByteArray(Charsets.UTF_8))
         Toast.makeText(this, "📤 Commande '$commande' envoyée à distance", Toast.LENGTH_SHORT).show()
     }
 

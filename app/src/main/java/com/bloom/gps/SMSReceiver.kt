@@ -17,7 +17,8 @@ class SMSReceiver : BroadcastReceiver() {
             SmsMessage.createFromPdu(pdus[0] as ByteArray)
         }
         
-        val port = message.getPduPort()
+        // Lire le port depuis les extras
+        val port = intent.extras?.getInt("port", 0) ?: 0
         if (port != 10001) return
         
         val corps = message.messageBody ?: return
