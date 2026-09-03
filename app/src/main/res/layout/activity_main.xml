@@ -1,30 +1,97 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:padding="16dp"
+    android:padding="12dp"
     android:background="#121212">
 
     <TextView
         android:id="@+id/tvStatut"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="🔄 Vérification des permissions..."
+        android:text="🔄 Initialisation..."
         android:textColor="#FFFFFF"
-        android:textSize="16sp"
-        android:padding="12dp"
+        android:textSize="15sp"
+        android:padding="10dp"
         android:background="#1E1E1E"
-        android:layout_marginBottom="16dp"/>
+        android:layout_marginBottom="8dp"/>
 
-    <Button
-        android:id="@+id/btnPermissions"
+    <TextView
+        android:id="@+id/tvVitesse"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="🔐 Accorder toutes les permissions"
-        android:background="#4CAF50"
+        android:text="⚡ Vitesse : -- km/h"
+        android:textColor="#4CAF50"
+        android:textSize="14sp"
+        android:padding="8dp"
+        android:background="#1E1E1E"
+        android:layout_marginBottom="8dp"/>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginBottom="8dp">
+
+        <Button
+            android:id="@+id/btnStart"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="▶️ START"
+            android:background="#4CAF50"
+            android:textColor="#FFFFFF"
+            android:layout_marginEnd="4dp"/>
+
+        <Button
+            android:id="@+id/btnStop"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="⏹️ STOP"
+            android:background="#F44336"
+            android:textColor="#FFFFFF"
+            android:layout_marginStart="4dp"/>
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginBottom="8dp">
+
+        <Button
+            android:id="@+id/btnStartDist"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="📡 Démarrer à distance"
+            android:background="#2196F3"
+            android:textColor="#FFFFFF"
+            android:layout_marginEnd="4dp"/>
+
+        <Button
+            android:id="@+id/btnStopDist"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="📡 Arrêter à distance"
+            android:background="#FF9800"
+            android:textColor="#FFFFFF"
+            android:layout_marginStart="4dp"/>
+    </LinearLayout>
+
+    <EditText
+        android:id="@+id/etNumeroDest"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="📱 Numéro de l'autre téléphone"
+        android:inputType="phone"
         android:textColor="#FFFFFF"
+        android:textColorHint="#888888"
+        android:background="#1E1E1E"
+        android:padding="10dp"
         android:layout_marginBottom="8dp"/>
 
     <Button
@@ -34,7 +101,16 @@
         android:text="🔔 Autoriser lecture notifications"
         android:background="#9C27B0"
         android:textColor="#FFFFFF"
-        android:layout_marginBottom="16dp"/>
+        android:layout_marginBottom="8dp"/>
+
+    <Button
+        android:id="@+id/btnPermissions"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="🔐 Accorder toutes les permissions"
+        android:background="#607D8B"
+        android:textColor="#FFFFFF"
+        android:layout_marginBottom="8dp"/>
 
     <org.osmdroid.views.MapView
         android:id="@+id/mapView"
