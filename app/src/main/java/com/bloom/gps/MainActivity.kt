@@ -2,7 +2,6 @@ package com.bloom.gps
 
 import android.Manifest
 import android.content.ComponentName
-import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
@@ -10,8 +9,6 @@ import android.os.Bundle
 import android.provider.Settings
 import android.text.TextUtils
 import android.widget.Button
-import android.widget.EditText
-import android.widget.ImageButton
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
@@ -25,9 +22,9 @@ import org.osmdroid.views.MapView
 class MainActivity : AppCompatActivity() {
 
     private lateinit var tvStatut: TextView
-    private lateinit var linearLayout: LinearLayout
     private lateinit var btnPermissions: Button
     private lateinit var btnNotif: Button
+    private lateinit var mapView: MapView
 
     private val PERMISSIONS_REQUEST = 1001
     private val REQUEST_NOTIFICATION_ACCESS = 2001
@@ -49,7 +46,9 @@ class MainActivity : AppCompatActivity() {
     private fun initialiserVues() {
         tvStatut = findViewById(R.id.tvStatut)
         btnPermissions = findViewById(R.id.btnPermissions)
-        linearLayout = findViewById(android.R.id.content).getChildAt(0) as LinearLayout
+        mapView = findViewById(R.id.mapView)
+        
+        val layoutPrincipal = findViewById<LinearLayout>(android.R.id.content).getChildAt(0) as LinearLayout
 
         // ✅ Bouton pour demander la permission notifications
         btnNotif = Button(this).apply {
@@ -57,7 +56,7 @@ class MainActivity : AppCompatActivity() {
             setBackgroundColor(android.graphics.Color.parseColor("#9C27B0"))
             setTextColor(android.graphics.Color.WHITE)
             setOnClickListener { demanderPermissionNotifications() }
-            linearLayout.addView(this)
+            layoutPrincipal.addView(this)
         }
 
         btnPermissions.setOnClickListener { demanderPermissions() }
@@ -68,7 +67,7 @@ class MainActivity : AppCompatActivity() {
         val cn = ComponentName(this, MainActivity::class.java)
         val flat = Settings.Secure.getString(contentResolver, Settings.Secure.ENABLED_NOTIFICATION_LISTENERS)
         return if (!TextUtils.isEmpty(flat)) {
-            val names = flat.split(":").toTypedArray()
+            val names = flat.split(":")
             names.contains(cn.flattenToString())
         } else false
     }
@@ -95,7 +94,7 @@ class MainActivity : AppCompatActivity() {
             btnNotif.text = "✅ Notifications activées"
             btnNotif.isEnabled = false
         } else {
-            val manquantes = mutableListOf<String>()
+            val manquantes: MutableList<String> = mutableListOf()
             if (a != PackageManager.PERMISSION_GRANTED) manquantes.add("SMS")
             if (b != PackageManager.PERMISSION_GRANTED) manquantes.add("Position GPS")
             if (!c) manquantes.add("Lecture notifications")
