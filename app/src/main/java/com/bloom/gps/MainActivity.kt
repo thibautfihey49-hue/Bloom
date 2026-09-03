@@ -10,7 +10,7 @@ import android.provider.Settings
 import android.text.TextUtils
 import android.util.Log
 import android.widget.*
-import androidx.appcompat.app.AlertDialog
+import androidx.appcompat.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
@@ -56,7 +56,7 @@ class MainActivity : AppCompatActivity() {
             initialiserDossierOsmdroid()
             initialiserVues()
             initialiserCarte()
-            verifierPermissions()
+            verifierPermissionsAuDemarrage()
             
         } catch (e: Exception) {
             montrerErreur("Erreur démarrage : ${e.message}")
@@ -150,7 +150,8 @@ class MainActivity : AppCompatActivity() {
         } catch (e: Exception) {}
     }
 
-    private fun verifierPermissions() {
+    // ✅ PLUS DE BOUCLE INFINIE — vérification UNE SEULE FOIS au démarrage
+    private fun verifierPermissionsAuDemarrage() {
         val manquantes = PERMISSIONS.filter { 
             ContextCompat.checkSelfPermission(this, it) != PackageManager.PERMISSION_GRANTED
         }.toMutableList()
@@ -159,7 +160,7 @@ class MainActivity : AppCompatActivity() {
             tvStatut.text = "✅ PRÊT — Entrez le numéro et démarrez"
         } else {
             tvStatut.text = "⚠️ Autorisations manquantes"
-            ActivityCompat.requestPermissions(this, PERMISSIONS, 1001)
+            ActivityCompat.requestPermissions(this, manquantes.toTypedArray(), 1001)
         }
     }
 
@@ -248,7 +249,6 @@ class MainActivity : AppCompatActivity() {
             registerReceiver(positionUpdateReceiver, IntentFilter("BLOOMGPS_UPDATE"))
             registerReceiver(autreUpdateReceiver, IntentFilter("BLOOMGPS_AUTRE_UPDATE"))
         } catch (e: Exception) {}
-        verifierPermissions()
     }
 
     override fun onPause() {
@@ -259,11 +259,20 @@ class MainActivity : AppCompatActivity() {
         } catch (e: Exception) {}
     }
 
+    // ✅ NE PLUS JAMAIS APPELER verifierPermissions() ici → boucle infinie évitée !
     override fun onRequestPermissionsResult(
         requestCode: Int, permissions: Array<out String>, grantResults: IntArray
     ) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        verifierPermissions()
+        if (requestCode == 1001) {
+            val toutesAccordees = grantResults.all { it == PackageManager.PERMISSION_GRANTED }
+            if (toutesAccordees) {
+                tvStatut.text = "✅ PRÊT — Entrez le numéro et démarrez"
+            } else {
+                tvStatut.text = "⚠️ Certaines autorisations manquent"
+                Toast.makeText(this, "⚠️ Sans toutes les permissions, l'application ne fonctionnera pas", Toast.LENGTH_LONG).show()
+            }
+        }
     }
 
     private fun montrerErreur(message: String) {
