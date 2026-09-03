@@ -49,7 +49,6 @@ class MainActivity : AppCompatActivity() {
         Manifest.permission.ACCESS_COARSE_LOCATION,
         Manifest.permission.SEND_SMS,
         Manifest.permission.READ_SMS,
-        Manifest.permission.DELETE_SMS,
         Manifest.permission.FOREGROUND_SERVICE,
         Manifest.permission.POST_NOTIFICATIONS
     )
@@ -131,12 +130,11 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun lireSMSRecus() {
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_SMS) != PackageManager.PERMISSION_GRANTED ||
-            ContextCompat.checkSelfPermission(this, Manifest.permission.DELETE_SMS) != PackageManager.PERMISSION_GRANTED) return
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_SMS) != PackageManager.PERMISSION_GRANTED) return
         
         val cursor: Cursor? = contentResolver.query(
             Telephony.Sms.CONTENT_URI,
-            arrayOf(Telephony.Sms._ID, Telephony.Sms.BODY, Telephony.Sms.TYPE),
+            arrayOf(Telephony.Sms._ID, Telephony.Sms.BODY, Telephony.Sms.TYPE, Telephony.Sms.READ),
             null, null,
             Telephony.Sms._ID + " DESC LIMIT 10"
         )
@@ -146,27 +144,30 @@ class MainActivity : AppCompatActivity() {
                 val id = it.getLong(0)
                 val corps = it.getString(1) ?: ""
                 val type = it.getInt(2)
+                val estLu = it.getInt(3) == 1
                 
                 if (type != Telephony.Sms.MESSAGE_TYPE_INBOX) continue
                 if (!corps.startsWith("BLOOMGPS:") && !corps.startsWith("BLOOMGPS_CMD:")) continue
+                if (estLu) continue // Déjà traité
                 
-                // ✅ C'EST UN MESSAGE BLOOM → ON LE TRAITE PUIS ON LE SUPPRIME
+                // ✅ Traiter PUIS marquer comme lu = PAS de notification, PAS d'affichage
                 traiterMessageRecu(corps)
-                supprimerSMS(id) // ⚡ Supprimé IMMÉDIATEMENT — invisible !
+                marquerCommeLu(id) // ⚡ Invisible dans la messagerie !
             }
         }
     }
 
-    private fun supprimerSMS(id: Long) {
+    private fun marquerCommeLu(id: Long) {
         try {
-            contentResolver.delete(
+            contentResolver.update(
                 Telephony.Sms.CONTENT_URI,
+                ContentValues().apply { put(Telephony.Sms.READ, 1) },
                 "${Telephony.Sms._ID} = ?",
                 arrayOf(id.toString())
             )
-            Log.d("BloomGPS", "🗑️ Message supprimé : id=$id")
+            Log.d("BloomGPS", "👁️ Message marqué comme lu : id=$id")
         } catch (e: Exception) {
-            Log.e("BloomGPS", "❌ Impossible de supprimer le SMS", e)
+            Log.e("BloomGPS", "❌ Impossible de marquer comme lu", e)
         }
     }
 
