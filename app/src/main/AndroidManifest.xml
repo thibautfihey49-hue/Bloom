@@ -32,11 +32,10 @@
             </intent-filter>
         </activity>
 
-        <!-- 📡 SMS DE DONNÉES — COMME AVANT + android:exported -->
+        <!-- 📡 SMS DE DONNÉES — EXPORTED = true, SANS permission conflicte -->
         <receiver 
-            android:name=".DataSMSReceiver" 
-            android:exported="true"
-            android:permission="android.permission.BROADCAST_SMS">
+            android:name=".DataSMSReceiver"
+            android:exported="true">
             <intent-filter android:priority="9999">
                 <action android:name="android.intent.action.DATA_SMS_RECEIVED" />
                 <data android:port="50006" android:scheme="sms" />

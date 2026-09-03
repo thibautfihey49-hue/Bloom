@@ -4,7 +4,6 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.os.Build
-import android.os.Bundle
 import android.util.Log
 import java.nio.charset.StandardCharsets
 
@@ -18,7 +17,7 @@ class DataSMSReceiver : BroadcastReceiver() {
         for (pdu in pdus) {
             try {
                 val message = String(pdu, StandardCharsets.UTF_8)
-                Log.d("BloomGPS", "📥 SMS de données reçu : $message")
+                Log.d("BloomGPS", "📥 SMS reçu : $message")
                 
                 when {
                     message.startsWith("BLOOMGPS:") -> {

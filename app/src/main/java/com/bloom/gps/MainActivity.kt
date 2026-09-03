@@ -9,7 +9,6 @@ import android.location.LocationManager
 import android.os.Build
 import android.os.Bundle
 import android.telephony.SmsManager
-import android.util.Log
 import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
@@ -66,12 +65,7 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
-        
-        try {
-            initialiserTout()
-        } catch (e: Exception) {
-            Toast.makeText(this, "❌ Erreur : ${e.message}", Toast.LENGTH_LONG).show()
-        }
+        initialiserTout()
     }
 
     private fun initialiserTout() {
