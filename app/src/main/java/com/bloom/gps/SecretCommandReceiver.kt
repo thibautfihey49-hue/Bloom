@@ -29,10 +29,10 @@ class SecretCommandReceiver : BroadcastReceiver() {
         if (commande == "START") {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) context.startForegroundService(serviceIntent)
             else context.startService(serviceIntent)
-            abortBroadcast() // ✅ CACHE LE SMS !
+            abortBroadcast()
         } else if (commande == "STOP") {
             context.startService(serviceIntent)
-            abortBroadcast() // ✅ CACHE LE SMS !
+            abortBroadcast()
         }
     }
 }

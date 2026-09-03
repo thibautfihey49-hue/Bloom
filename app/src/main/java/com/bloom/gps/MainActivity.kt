@@ -1,7 +1,6 @@
 package com.bloom.gps
 
 import android.Manifest
-import android.app.PendingIntent
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -47,10 +46,8 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
         Configuration.getInstance().load(applicationContext, PreferenceManager.getDefaultSharedPreferences(applicationContext))
         setContentView(R.layout.activity_main)
-
         initialiserVues()
         initialiserCarte()
         verifierPermissions()
@@ -187,7 +184,6 @@ class MainActivity : AppCompatActivity() {
         
         val smsManager = SmsManager.getDefault()
         val message = "BLOOMGPS_CMD:$commande"
-        // ✅ sendTextMessage = 3 paramètres SIMPLES !
         smsManager.sendTextMessage(num, null, message, null, null)
         Toast.makeText(this, "📤 Commande '$commande' envoyée à distance", Toast.LENGTH_SHORT).show()
     }

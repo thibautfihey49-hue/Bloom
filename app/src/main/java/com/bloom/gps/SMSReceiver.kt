@@ -34,7 +34,7 @@ class SMSReceiver : BroadcastReceiver() {
                     putExtra("speed", vitesse)
                 }
                 context.sendBroadcast(updateIntent)
-                abortBroadcast() // ✅ CACHE LE SMS DANS LA MESSAGERIE !
+                abortBroadcast()
             } catch (e: NumberFormatException) {}
         }
     }

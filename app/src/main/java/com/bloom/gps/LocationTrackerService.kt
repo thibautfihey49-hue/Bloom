@@ -79,7 +79,6 @@ class LocationTrackerService : Service() {
         try {
             val smsManager = SmsManager.getDefault()
             val message = "BLOOMGPS:${location.latitude},${location.longitude},${location.speed}"
-            // ✅ sendTextMessage = 3 paramètres SIMPLES !
             smsManager.sendTextMessage(numeroDest, null, message, null, null)
             Log.d("BloomGPS", "Position envoyée : $message")
         } catch (e: Exception) {
