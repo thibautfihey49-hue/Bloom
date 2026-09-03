@@ -22,7 +22,7 @@
         android:id="@+id/tvStatut"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="🔍 Vérification des permissions..."
+        android:text="✅ Prêt — entrez un numéro et démarrez"
         android:padding="12dp"
         android:background="#E8F5E9"
         android:textColor="#2E7D32"
@@ -32,7 +32,6 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        android:gravity="center"
         android:layout_marginBottom="8dp">
 
         <TextView
