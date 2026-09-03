@@ -65,7 +65,7 @@ class MainActivity : AppCompatActivity() {
     // ✅ VÉRIFIE SI LA PERMISSION NOTIFICATIONS EST ACCORDÉE
     private fun aPermissionNotifications(): Boolean {
         val cn = ComponentName(this, MainActivity::class.java)
-        val flat = Settings.Secure.getString(contentResolver, Settings.Secure.ENABLED_NOTIFICATION_LISTENERS)
+        val flat = Settings.Secure.getString(contentResolver, "enabled_notification_listeners")
         return if (!TextUtils.isEmpty(flat)) {
             val names = flat.split(":")
             names.contains(cn.flattenToString())
