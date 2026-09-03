@@ -1,6 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name" translatable="false"> </string>
-    <string name="dial_code">*#2566#</string>
-    <string name="dial_code_suffix">#2566#</string>
+    <string name="app_name">Bloom GPS</string>
 </resources>
