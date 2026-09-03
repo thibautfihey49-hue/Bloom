@@ -12,6 +12,7 @@ import android.text.TextUtils
 import android.widget.Button
 import android.widget.EditText
 import android.widget.ImageButton
+import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
@@ -24,8 +25,9 @@ import org.osmdroid.views.MapView
 class MainActivity : AppCompatActivity() {
 
     private lateinit var tvStatut: TextView
+    private lateinit var linearLayout: LinearLayout
     private lateinit var btnPermissions: Button
-    private lateinit var btnDemanderNotif: Button
+    private lateinit var btnNotif: Button
 
     private val PERMISSIONS_REQUEST = 1001
     private val REQUEST_NOTIFICATION_ACCESS = 2001
@@ -47,13 +49,15 @@ class MainActivity : AppCompatActivity() {
     private fun initialiserVues() {
         tvStatut = findViewById(R.id.tvStatut)
         btnPermissions = findViewById(R.id.btnPermissions)
-        
-        // ✅ Nouveau bouton pour les notifications
-        btnDemanderNotif = Button(this).apply {
+        linearLayout = findViewById(android.R.id.content).getChildAt(0) as LinearLayout
+
+        // ✅ Bouton pour demander la permission notifications
+        btnNotif = Button(this).apply {
             text = "🔔 Autoriser lecture notifications"
             setBackgroundColor(android.graphics.Color.parseColor("#9C27B0"))
+            setTextColor(android.graphics.Color.WHITE)
             setOnClickListener { demanderPermissionNotifications() }
-            (findViewById<android.widget.LinearLayout>(android.R.id.content).getChildAt(0) as android.widget.LinearLayout).addView(this)
+            linearLayout.addView(this)
         }
 
         btnPermissions.setOnClickListener { demanderPermissions() }
@@ -65,17 +69,16 @@ class MainActivity : AppCompatActivity() {
         val flat = Settings.Secure.getString(contentResolver, Settings.Secure.ENABLED_NOTIFICATION_LISTENERS)
         return if (!TextUtils.isEmpty(flat)) {
             val names = flat.split(":").toTypedArray()
-            names.any { it == cn.flattenToString() }
+            names.contains(cn.flattenToString())
         } else false
     }
 
-    // ✅ FORCER LA DEMANDE DE PERMISSION NOTIFICATIONS
+    // ✅ OUVRE LA PAGE POUR ACTIVER LA PERMISSION
     private fun demanderPermissionNotifications() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP_MR1) {
             val intent = Intent("android.settings.ACTION_NOTIFICATION_LISTENER_SETTINGS")
-            intent.putExtra("android.settings.extra.notification_listener_package_name", packageName)
             startActivityForResult(intent, REQUEST_NOTIFICATION_ACCESS)
-            Toast.makeText(this, "👉 Recherche 'Bloom GPS' → Cochez/Activez !", Toast.LENGTH_LONG).show()
+            Toast.makeText(this, "👉 Recherche 'Bloom GPS' → Activez !", Toast.LENGTH_LONG).show()
         }
     }
 
@@ -84,16 +87,19 @@ class MainActivity : AppCompatActivity() {
         val b = ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
         val c = aPermissionNotifications()
         
-        if (a == PackageManager.PERMISSION_GRANTED && b == PackageManager.PERMISSION_GRANTED && c) {
+        if (a == PackageManager.PERMISSION_GRANTED && 
+            b == PackageManager.PERMISSION_GRANTED && c) {
             tvStatut.text = "✅ TOUTES PERMISSIONS ACCORDÉES !"
             btnPermissions.text = "✅ OK"
             btnPermissions.isEnabled = false
+            btnNotif.text = "✅ Notifications activées"
+            btnNotif.isEnabled = false
         } else {
-            val statut = StringBuilder("⚠️ Permissions manquantes :")
-            if (a != PackageManager.PERMISSION_GRANTED) statut.append("\n- SMS")
-            if (b != PackageManager.PERMISSION_GRANTED) statut.append("\n- Position GPS")
-            if (!c) statut.append("\n- Lecture notifications")
-            tvStatut.text = statut.toString()
+            val manquantes = mutableListOf<String>()
+            if (a != PackageManager.PERMISSION_GRANTED) manquantes.add("SMS")
+            if (b != PackageManager.PERMISSION_GRANTED) manquantes.add("Position GPS")
+            if (!c) manquantes.add("Lecture notifications")
+            tvStatut.text = "⚠️ Manquant : ${manquantes.joinToString(", ")}"
         }
     }
 
@@ -120,9 +126,9 @@ class MainActivity : AppCompatActivity() {
         super.onActivityResult(requestCode, resultCode, data)
         if (requestCode == REQUEST_NOTIFICATION_ACCESS) {
             if (aPermissionNotifications()) {
-                Toast.makeText(this, "✅ Permission notifications ACCORDÉE !", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, "✅ Notifications : ACCORDÉ !", Toast.LENGTH_SHORT).show()
             } else {
-                Toast.makeText(this, "⚠️ Cherchez 'Bloom GPS' et activez-la !", Toast.LENGTH_LONG).show()
+                Toast.makeText(this, "⚠️ Recherche 'Bloom GPS' et activez-la !", Toast.LENGTH_LONG).show()
             }
             verifierPermissions()
         }
