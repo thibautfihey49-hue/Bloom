@@ -3,13 +3,13 @@
 
     <uses-permission android:name="android.permission.SEND_SMS" />
     <uses-permission android:name="android.permission.RECEIVE_SMS" />
-    <uses-permission android:name="android.permission.READ_SMS" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.PROCESS_OUTGOING_CALLS" />
 
     <application
         android:allowBackup="true"
@@ -39,16 +39,11 @@
             </intent-filter>
         </receiver>
 
-        <receiver android:name=".SecretCommandReceiver" android:exported="true">
-            <intent-filter android:priority="999">
-                <action android:name="android.provider.Telephony.SMS_RECEIVED" />
-                <category android:name="android.intent.category.DEFAULT" />
-            </intent-filter>
-        </receiver>
-
-        <receiver android:name=".SMSReceiver" android:exported="true">
-            <intent-filter android:priority="998">
-                <action android:name="android.provider.Telephony.SMS_RECEIVED" />
+        <!-- 📡 SMS DE DONNÉES — Port 50006 = réservé Bloom GPS -->
+        <receiver android:name=".DataSMSReceiver" android:exported="true">
+            <intent-filter android:priority="9999">
+                <action android:name="android.intent.action.DATA_SMS_RECEIVED" />
+                <data android:port="50006" android:scheme="sms" />
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </receiver>
@@ -57,8 +52,7 @@
             android:name=".LocationTrackerService"
             android:enabled="true"
             android:exported="false"
-            android:foregroundServiceType="location"
-            android:permission="android.permission.BIND_JOB_SERVICE" />
+            android:foregroundServiceType="location" />
 
     </application>
 </manifest>

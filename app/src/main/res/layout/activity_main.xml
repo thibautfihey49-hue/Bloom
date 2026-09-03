@@ -1,22 +1,20 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:background="#F5F5F5"
-    android:padding="12dp"
-    tools:context=".MainActivity">
+    android:background="#121212"
+    android:padding="16dp">
 
     <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="🌸 Bloom GPS"
-        android:textSize="24sp"
+        android:text="🌸 BLOOM GPS — SMS de DONNÉES"
+        android:textSize="22sp"
         android:textStyle="bold"
         android:gravity="center"
-        android:padding="16dp"
-        android:textColor="#FF6B3B"/>
+        android:textColor="#4CAF50"
+        android:layout_marginBottom="16dp"/>
 
     <TextView
         android:id="@+id/tvStatut"
@@ -24,118 +22,95 @@
         android:layout_height="wrap_content"
         android:text="✅ Prêt"
         android:textSize="14sp"
-        android:gravity="center"
-        android:padding="8dp"
-        android:background="#E8F5E9"
-        android:textColor="#2E7D32"/>
+        android:textColor="#FFFFFF"
+        android:background="#1E1E1E"
+        android:padding="12dp"
+        android:layout_marginBottom="8dp"/>
 
     <TextView
         android:id="@+id/tvVitesse"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="⚡ Vitesse : 0 km/h"
-        android:textSize="16sp"
-        android:textStyle="bold"
-        android:gravity="center"
-        android:padding="8dp"
-        android:layout_marginTop="8dp"/>
+        android:text="⚡ Vitesse : -- km/h"
+        android:textSize="14sp"
+        android:textColor="#FFC107"
+        android:background="#1E1E1E"
+        android:padding="12dp"
+        android:layout_marginBottom="16dp"/>
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="📱 Numéro de l'autre téléphone :"
+        android:textSize="14sp"
+        android:textColor="#AAAAAA"
+        android:layout_marginBottom="4dp"/>
 
     <EditText
         android:id="@+id/etNumeroDest"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:hint="📱 Numéro de l'autre téléphone"
+        android:hint="Ex: 0612345678"
         android:inputType="phone"
+        android:textColor="#FFFFFF"
+        android:background="#2A2A2A"
         android:padding="12dp"
-        android:layout_marginTop="8dp"
-        android:background="#FFFFFF"
-        android:textSize="14sp"/>
+        android:layout_marginBottom="16dp"/>
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        android:layout_marginTop="12dp">
+        android:gap="8dp"
+        android:layout_marginBottom="8dp">
 
         <Button
             android:id="@+id/btnStart"
             android:layout_width="0dp"
-            android:layout_height="50dp"
+            android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="▶️ MOI — Démarrer"
-            android:background="#4CAF50"
+            android:text="▶️ DÉMARRER MOI"
+            android:background="#2E7D32"
             android:textColor="#FFFFFF"
-            android:textSize="12sp"
-            android:layout_marginEnd="4dp"/>
+            android:paddingVertical="12dp"/>
 
         <Button
             android:id="@+id/btnStop"
             android:layout_width="0dp"
-            android:layout_height="50dp"
+            android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="⏹️ MOI — Arrêter"
-            android:background="#F44336"
+            android:text="⏹️ ARRÊTER MOI"
+            android:background="#C62828"
             android:textColor="#FFFFFF"
-            android:textSize="12sp"
-            android:layout_marginStart="4dp"/>
+            android:paddingVertical="12dp"/>
     </LinearLayout>
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        android:layout_marginTop="8dp">
+        android:gap="8dp"
+        android:layout_marginBottom="16dp">
 
         <Button
             android:id="@+id/btnStartDist"
             android:layout_width="0dp"
-            android:layout_height="50dp"
+            android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="📤 À distance — Démarrer"
-            android:background="#2196F3"
+            android:text="📡 DÉMARRER À DISTANCE"
+            android:background="#1565C0"
             android:textColor="#FFFFFF"
-            android:textSize="12sp"
-            android:layout_marginEnd="4dp"/>
+            android:paddingVertical="12dp"/>
 
         <Button
             android:id="@+id/btnStopDist"
             android:layout_width="0dp"
-            android:layout_height="50dp"
+            android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="📤 À distance — Arrêter"
-            android:background="#FF9800"
+            android:text="📡 ARRÊTER À DISTANCE"
+            android:background="#FF6F00"
             android:textColor="#FFFFFF"
-            android:textSize="12sp"
-            android:layout_marginStart="4dp"/>
-    </LinearLayout>
-
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:layout_marginTop="8dp">
-
-        <Button
-            android:id="@+id/btnPermissions"
-            android:layout_width="0dp"
-            android:layout_height="45dp"
-            android:layout_weight="1"
-            android:text="🔑 Autorisations"
-            android:background="#9C27B0"
-            android:textColor="#FFFFFF"
-            android:textSize="11sp"
-            android:layout_marginEnd="4dp"/>
-
-        <Button
-            android:id="@+id/btnNotif"
-            android:layout_width="0dp"
-            android:layout_height="45dp"
-            android:layout_weight="1"
-            android:text="🔔 Notifications"
-            android:background="#607D8B"
-            android:textColor="#FFFFFF"
-            android:textSize="11sp"
-            android:layout_marginStart="4dp"/>
+            android:paddingVertical="12dp"/>
     </LinearLayout>
 
     <org.osmdroid.views.MapView
@@ -143,15 +118,6 @@
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
-        android:layout_marginTop="12dp"/>
-
-    <TextView
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="💡 Astuce : Compose *#2566# pour ouvrir l'app cachée"
-        android:textSize="11sp"
-        android:gravity="center"
-        android:padding="8dp"
-        android:textColor="#757575"/>
+        android:layout_marginTop="8dp"/>
 
 </LinearLayout>

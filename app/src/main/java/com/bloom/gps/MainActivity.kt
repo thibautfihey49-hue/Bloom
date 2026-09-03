@@ -8,6 +8,7 @@ import android.os.Bundle
 import android.os.Environment
 import android.provider.Settings
 import android.text.TextUtils
+import android.util.Log
 import android.widget.*
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
@@ -31,15 +32,21 @@ class MainActivity : AppCompatActivity() {
     private lateinit var btnStop: Button
     private lateinit var btnStartDist: Button
     private lateinit var btnStopDist: Button
-    private lateinit var btnNotif: Button
-    private lateinit var btnPermissions: Button
     private lateinit var etNumeroDest: EditText
     private lateinit var mapView: MapView
     private var monMarqueur: Marker? = null
     private var autreMarqueur: Marker? = null
+    private val PORT_BLOOM = 50006
 
-    private val PERMISSIONS_REQUEST = 1001
-    private val REQUEST_NOTIFICATION_ACCESS = 2001
+    private val PERMISSIONS = arrayOf(
+        Manifest.permission.INTERNET,
+        Manifest.permission.ACCESS_FINE_LOCATION,
+        Manifest.permission.ACCESS_COARSE_LOCATION,
+        Manifest.permission.SEND_SMS,
+        Manifest.permission.RECEIVE_SMS,
+        Manifest.permission.FOREGROUND_SERVICE,
+        Manifest.permission.POST_NOTIFICATIONS
+    )
 
     override fun onCreate(savedInstanceState: Bundle?) {
         try {
@@ -77,8 +84,6 @@ class MainActivity : AppCompatActivity() {
         btnStop = findViewById(R.id.btnStop)
         btnStartDist = findViewById(R.id.btnStartDist)
         btnStopDist = findViewById(R.id.btnStopDist)
-        btnNotif = findViewById(R.id.btnNotif)
-        btnPermissions = findViewById(R.id.btnPermissions)
         etNumeroDest = findViewById(R.id.etNumeroDest)
         mapView = findViewById(R.id.mapView)
 
@@ -87,10 +92,8 @@ class MainActivity : AppCompatActivity() {
 
         btnStart.setOnClickListener { demarrerLocal() }
         btnStop.setOnClickListener { arreterLocal() }
-        btnStartDist.setOnClickListener { envoyerCommande("START") }
-        btnStopDist.setOnClickListener { envoyerCommande("STOP") }
-        btnNotif.setOnClickListener { demanderPermissionNotifications() }
-        btnPermissions.setOnClickListener { demanderPermissions() }
+        btnStartDist.setOnClickListener { envoyerCommandeADistance("START") }
+        btnStopDist.setOnClickListener { envoyerCommandeADistance("STOP") }
     }
 
     private fun initialiserCarte() {
@@ -101,99 +104,78 @@ class MainActivity : AppCompatActivity() {
 
             monMarqueur = Marker(mapView).apply {
                 icon = resources.getDrawable(android.R.drawable.ic_menu_mylocation, null)
-                title = "📍 Moi"
+                title = "📍 MOI"
+                setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
             }
             autreMarqueur = Marker(mapView).apply {
                 icon = resources.getDrawable(android.R.drawable.ic_menu_compass, null)
-                title = "📍 Lui/Elle"
+                title = "📍 LUI/ELLE"
+                setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
             }
             mapView.overlays.add(monMarqueur)
             mapView.overlays.add(autreMarqueur)
             
-            mapView.controller.setCenter(GeoPoint(48.95, 2.35)) // Paris par défaut
+            val positionDefaut = GeoPoint(48.8584, 2.2945)
+            monMarqueur?.position = positionDefaut
+            mapView.controller.setCenter(positionDefaut)
+            
+            Log.d("BloomGPS", "✅ Carte initialisée")
         } catch (e: Exception) {
+            Log.e("BloomGPS", "❌ Erreur carte", e)
             Toast.makeText(this, "⚠️ Carte indisponible", Toast.LENGTH_SHORT).show()
         }
     }
 
     fun mettreAJourMaPosition(lat: Double, lon: Double, vitesse: Float) {
         try {
-            monMarqueur?.position = GeoPoint(lat, lon)
-            mapView.controller.setCenter(GeoPoint(lat, lon))
-            tvVitesse.text = "⚡ Vitesse : ${(vitesse * 3.6).roundToInt()} km/h"
+            val position = GeoPoint(lat, lon)
+            monMarqueur?.position = position
+            mapView.controller.setCenter(position)
+            tvVitesse.text = "⚡ MA vitesse : ${(vitesse * 3.6).roundToInt()} km/h"
+            tvStatut.text = "✅ MA position : %.6f, %.6f".format(lat, lon)
             mapView.invalidate()
+            Log.d("BloomGPS", "📍 MA position : $lat, $lon")
         } catch (e: Exception) {}
     }
 
     fun mettreAJourPositionAutre(lat: Double, lon: Double, vitesse: Float) {
         try {
-            autreMarqueur?.position = GeoPoint(lat, lon)
-            tvVitesse.text = "⚡ Vitesse de l'autre : ${(vitesse * 3.6).roundToInt()} km/h"
+            val position = GeoPoint(lat, lon)
+            autreMarqueur?.position = position
+            tvVitesse.text = "⚡ LUI/ELLE : ${(vitesse * 3.6).roundToInt()} km/h"
+            tvStatut.text = "✅ Lui/Elle : %.6f, %.6f".format(lat, lon)
             mapView.invalidate()
+            Toast.makeText(this, "📥 Position reçue !", Toast.LENGTH_SHORT).show()
+            Log.d("BloomGPS", "📍 Position de l'autre : $lat, $lon")
         } catch (e: Exception) {}
     }
 
-    private fun aPermissionNotifications(): Boolean {
-        val cn = ComponentName(this, MainActivity::class.java)
-        val flat = Settings.Secure.getString(contentResolver, "enabled_notification_listeners")
-        return if (!TextUtils.isEmpty(flat)) flat.split(":").contains(cn.flattenToString()) else false
-    }
-
-    private fun demanderPermissionNotifications() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP_MR1) {
-            val intent = Intent("android.settings.ACTION_NOTIFICATION_LISTENER_SETTINGS")
-            startActivityForResult(intent, REQUEST_NOTIFICATION_ACCESS)
-            Toast.makeText(this, "👉 Recherche 'Bloom GPS' → Activez !", Toast.LENGTH_LONG).show()
-        }
-    }
-
     private fun verifierPermissions() {
-        val a = ContextCompat.checkSelfPermission(this, Manifest.permission.SEND_SMS)
-        val b = ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
-        val c = aPermissionNotifications()
+        val manquantes = PERMISSIONS.filter { 
+            ContextCompat.checkSelfPermission(this, it) != PackageManager.PERMISSION_GRANTED
+        }.toMutableList()
         
-        if (a == PackageManager.PERMISSION_GRANTED && b == PackageManager.PERMISSION_GRANTED) {
-            tvStatut.text = "✅ PRÊT"
-            btnPermissions.text = "✅ OK"
-            btnPermissions.isEnabled = false
-            if (c) {
-                btnNotif.text = "✅ Notifications"
-                btnNotif.isEnabled = false
-            }
+        if (manquantes.isEmpty()) {
+            tvStatut.text = "✅ PRÊT — Entrez le numéro et démarrez"
         } else {
-            val manquantes: MutableList<String> = mutableListOf()
-            if (a != PackageManager.PERMISSION_GRANTED) manquantes.add("SMS")
-            if (b != PackageManager.PERMISSION_GRANTED) manquantes.add("GPS")
-            tvStatut.text = "⚠️ Manquant : ${manquantes.joinToString(", ")}"
+            tvStatut.text = "⚠️ Autorisations manquantes"
+            ActivityCompat.requestPermissions(this, PERMISSIONS, 1001)
         }
-    }
-
-    private fun demanderPermissions() {
-        ActivityCompat.requestPermissions(this, arrayOf(
-            Manifest.permission.INTERNET,
-            Manifest.permission.ACCESS_FINE_LOCATION,
-            Manifest.permission.ACCESS_COARSE_LOCATION,
-            Manifest.permission.SEND_SMS,
-            Manifest.permission.RECEIVE_SMS,
-            Manifest.permission.READ_SMS,
-            Manifest.permission.PROCESS_OUTGOING_CALLS,
-            Manifest.permission.FOREGROUND_SERVICE,
-            Manifest.permission.POST_NOTIFICATIONS
-        ), PERMISSIONS_REQUEST)
     }
 
     private fun demarrerLocal() {
         val num = etNumeroDest.text.toString().trim()
-        if (num.isEmpty()) { 
+        if (num.isEmpty()) {
             Toast.makeText(this, "⚠️ Entrez le numéro de l'autre téléphone", Toast.LENGTH_SHORT).show()
-            return 
+            return
         }
-        val prefs = PreferenceManager.getDefaultSharedPreferences(this)
-        prefs.edit().putString("numero_dest", num).apply()
+        PreferenceManager.getDefaultSharedPreferences(this)
+            .edit().putString("numero_dest", num).apply()
         
-        val intent = Intent(this, LocationTrackerService::class.java)
-        intent.putExtra("commande", "START")
-        intent.putExtra("numero_dest", num)
+        val intent = Intent(this, LocationTrackerService::class.java).apply {
+            putExtra("commande", "START")
+            putExtra("numero_dest", num)
+        }
         
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -201,40 +183,38 @@ class MainActivity : AppCompatActivity() {
             } else {
                 startService(intent)
             }
-            tvStatut.text = "✅ Suivi DÉMARRÉ — Envoi toutes les 10m"
-            Toast.makeText(this, "📡 Envoi position vers $num", Toast.LENGTH_SHORT).show()
+            tvStatut.text = "✅ SUIVI DÉMARRÉ — 10m entre chaque envoi"
+            Toast.makeText(this, "📡 Envoi vers $num — SMS de données", Toast.LENGTH_SHORT).show()
         } catch (e: Exception) {
-            Toast.makeText(this, "⚠️ Erreur démarrage : ${e.message}", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, "⚠️ Erreur : ${e.message}", Toast.LENGTH_SHORT).show()
         }
     }
 
     private fun arreterLocal() {
         try {
-            val intent = Intent(this, LocationTrackerService::class.java)
-            stopService(intent)
-            tvStatut.text = "🛑 Suivi ARRÊTÉ"
+            startService(Intent(this, LocationTrackerService::class.java).apply {
+                putExtra("commande", "STOP")
+            })
+            tvStatut.text = "🛑 SUIVI ARRÊTÉ"
             Toast.makeText(this, "⏹️ Service arrêté", Toast.LENGTH_SHORT).show()
-        } catch (e: Exception) {
-            Toast.makeText(this, "⚠️ Erreur arrêt", Toast.LENGTH_SHORT).show()
-        }
+        } catch (e: Exception) {}
     }
 
-    private fun envoyerCommande(commande: String) {
+    private fun envoyerCommandeADistance(commande: String) {
         val num = etNumeroDest.text.toString().trim()
-        if (num.isEmpty()) { 
-            Toast.makeText(this, "⚠️ Entrez le numéro", Toast.LENGTH_SHORT).show()
-            return 
+        if (num.isEmpty()) {
+            Toast.makeText(this, "⚠️ Entrez le numéro d'abord", Toast.LENGTH_SHORT).show()
+            return
         }
-        val prefs = PreferenceManager.getDefaultSharedPreferences(this)
-        prefs.edit().putString("numero_dest", num).apply()
-        
         try {
             val smsManager = SmsManager.getDefault()
-            val message = "BLOOMGPS_CMD:$commande"
-            smsManager.sendTextMessage(num, null, message, null, null)
-            Toast.makeText(this, "📤 Commande '$commande' envoyée", Toast.LENGTH_SHORT).show()
+            val contenu = "BLOOMGPS_CMD:$commande"
+            val donnees = contenu.toByteArray(Charsets.UTF_8)
+            smsManager.sendDataMessage(num, null, PORT_BLOOM.toShort(), donnees, null, null)
+            Toast.makeText(this, "📤 Commande $commande envoyée à distance", Toast.LENGTH_SHORT).show()
+            Log.d("BloomGPS", "📤 Commande $commande à $num")
         } catch (e: Exception) {
-            Toast.makeText(this, "⚠️ Erreur envoi SMS : ${e.message}", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, "⚠️ Erreur envoi : ${e.message}", Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -279,16 +259,10 @@ class MainActivity : AppCompatActivity() {
         } catch (e: Exception) {}
     }
 
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        super.onActivityResult(requestCode, resultCode, data)
-        if (requestCode == REQUEST_NOTIFICATION_ACCESS) {
-            Toast.makeText(this, if (aPermissionNotifications()) "✅ Notifications : ACCORDÉ !" else "⚠️ Activez Bloom GPS !", Toast.LENGTH_SHORT).show()
-            verifierPermissions()
-        }
-    }
-
-    override fun onRequestPermissionsResult(rq: Int, p: Array<out String>, g: IntArray) {
-        super.onRequestPermissionsResult(rq, p, g)
+    override fun onRequestPermissionsResult(
+        requestCode: Int, permissions: Array<out String>, grantResults: IntArray
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         verifierPermissions()
     }
 

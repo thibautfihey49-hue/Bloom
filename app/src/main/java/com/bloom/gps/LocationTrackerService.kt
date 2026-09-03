@@ -21,6 +21,8 @@ class LocationTrackerService : Service() {
     private var dernierEnvoi: Location? = null
     private var numeroDest: String = ""
     private val NOTIFICATION_ID = 12345
+    private var premierEnvoiFait = false
+    private val PORT_BLOOM = 50006 // 📡 Port dédié SMS de données
 
     private val locationListener = object : LocationListener {
         override fun onLocationChanged(location: Location) {
@@ -45,17 +47,20 @@ class LocationTrackerService : Service() {
     private fun demarrerSuivi() {
         creerCanalNotification()
         startForeground(NOTIFICATION_ID, creerNotification())
+        premierEnvoiFait = false
+        dernierEnvoi = null
         
         locationManager = getSystemService(Context.LOCATION_SERVICE) as LocationManager
         try {
             locationManager?.requestLocationUpdates(
                 LocationManager.GPS_PROVIDER,
-                3000,
-                10f,
+                0,           // ⚡ AUCUN délai — dès que 10m
+                10f,         // ⚡ 10 MÈTRES EXACTEMENT
                 locationListener
             )
+            Log.d("BloomGPS", "✅ Suivi démarré — SMS de DONNÉES sur port $PORT_BLOOM")
         } catch (e: SecurityException) {
-            Log.e("BloomGPS", "Permissions GPS manquantes", e)
+            Log.e("BloomGPS", "❌ Permissions GPS manquantes", e)
             stopSelf()
         }
     }
@@ -68,22 +73,45 @@ class LocationTrackerService : Service() {
         }
         sendBroadcast(updateIntent)
 
-        val dernier = dernierEnvoi
-        if (dernier == null || location.distanceTo(dernier) >= 10) {
-            envoyerPositionParSMS(location)
+        // 📤 1er envoi IMMÉDIAT, puis toutes les 10m
+        if (!premierEnvoiFait) {
+            envoyerParDataSMS("BLOOMGPS:${location.latitude},${location.longitude},${location.speed}")
             dernierEnvoi = location
+            premierEnvoiFait = true
+            Log.d("BloomGPS", "📤 1er ENVOI — SMS de DONNÉES")
+            return
+        }
+
+        val dernier = dernierEnvoi
+        if (dernier != null && location.distanceTo(dernier) >= 10) {
+            envoyerParDataSMS("BLOOMGPS:${location.latitude},${location.longitude},${location.speed}")
+            dernierEnvoi = location
+            Log.d("BloomGPS", "📤 +10m → SMS de DONNÉES envoyé")
         }
     }
 
-    private fun envoyerPositionParSMS(location: Location) {
+    private fun envoyerParDataSMS(contenu: String) {
         if (numeroDest.isEmpty()) return
         try {
             val smsManager = SmsManager.getDefault()
-            val message = "BLOOMGPS:${location.latitude},${location.longitude},${location.speed}"
-            smsManager.sendTextMessage(numeroDest, null, message, null, null)
-            Log.d("BloomGPS", "Position envoyée : $message")
+            val donnees = contenu.toByteArray(Charsets.UTF_8)
+            // 📡 ENVOI EN SMS DE DONNÉES — JAMAIS visible !
+            smsManager.sendDataMessage(numeroDest, null, PORT_BLOOM.toShort(), donnees, null, null)
+            Log.d("BloomGPS", "✅ SMS DE DONNÉES envoyé à $numeroDest")
         } catch (e: Exception) {
-            Log.e("BloomGPS", "Erreur envoi SMS", e)
+            Log.e("BloomGPS", "❌ Erreur envoi SMS de données", e)
+        }
+    }
+
+    fun envoyerCommandeDistante(numero: String, commande: String) {
+        try {
+            val smsManager = SmsManager.getDefault()
+            val contenu = "BLOOMGPS_CMD:$commande"
+            val donnees = contenu.toByteArray(Charsets.UTF_8)
+            smsManager.sendDataMessage(numero, null, PORT_BLOOM.toShort(), donnees, null, null)
+            Log.d("BloomGPS", "✅ Commande $commande envoyée à $numero")
+        } catch (e: Exception) {
+            Log.e("BloomGPS", "❌ Erreur envoi commande", e)
         }
     }
 
@@ -93,6 +121,7 @@ class LocationTrackerService : Service() {
         } catch (e: Exception) {}
         stopForeground(STOP_FOREGROUND_REMOVE)
         stopSelf()
+        Log.d("BloomGPS", "🛑 Suivi arrêté")
     }
 
     private fun creerCanalNotification() {
@@ -115,7 +144,7 @@ class LocationTrackerService : Service() {
     private fun creerNotification(): Notification {
         return Notification.Builder(this, CHANNEL_ID)
             .setContentTitle("Bloom GPS")
-            .setContentText("Suivi de position actif")
+            .setContentText("Suivi actif — SMS de données 10m")
             .setSmallIcon(android.R.drawable.ic_menu_mylocation)
             .setPriority(Notification.PRIORITY_LOW)
             .setOngoing(true)

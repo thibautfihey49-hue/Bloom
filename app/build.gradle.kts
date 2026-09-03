@@ -6,27 +6,35 @@ plugins {
 android {
     namespace = "com.bloom.gps"
     compileSdk = 34
+
     defaultConfig {
         applicationId = "com.bloom.gps"
         minSdk = 24
         targetSdk = 34
-        versionCode = 2
-        versionName = "1.1"
+        versionCode = 3
+        versionName = "2.0"
     }
+
     buildTypes {
-        release { isMinifyEnabled = false }
+        release {
+            minifyEnabled = false
+        }
     }
+    
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
-    kotlinOptions { jvmTarget = "17" }
+    
+    kotlinOptions {
+        jvmTarget = "17"
+    }
 }
 
 dependencies {
     implementation("androidx.core:core-ktx:1.12.0")
     implementation("androidx.appcompat:appcompat:1.6.1")
-    implementation("androidx.constraintlayout:constraintlayout:2.1.4")
+    implementation("com.google.android.material:material:1.11.0")
     implementation("org.osmdroid:osmdroid-android:6.1.18")
     implementation("androidx.preference:preference-ktx:1.2.1")
 }
