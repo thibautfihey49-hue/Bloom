@@ -37,7 +37,11 @@ class LocationTrackerService : Service() {
         val cmd = intent?.getStringExtra("commande") ?: return START_NOT_STICKY
         numeroDest = intent.getStringExtra("numero_dest") ?: ""
         
-        Log.d("BloomGPS", "🔧 Service démarré avec commande : $cmd, dest=$numeroDest")
+        Log.d("BloomGPS", "========================================")
+        Log.d("BloomGPS", "🔧 SERVICE DÉMARRÉ")
+        Log.d("BloomGPS", "🔧 Commande : $cmd")
+        Log.d("BloomGPS", "🔧 Destinataire : $numeroDest")
+        Log.d("BloomGPS", "========================================")
         
         when (cmd) {
             "START" -> demarrerSuivi()
@@ -57,10 +61,10 @@ class LocationTrackerService : Service() {
             locationManager?.requestLocationUpdates(
                 LocationManager.GPS_PROVIDER,
                 0,
-                10f,         // ⚡ 10 MÈTRES EXACTEMENT
+                10f,
                 locationListener
             )
-            Log.d("BloomGPS", "✅ ✅ SUIVI DÉMARRÉ — SMS de DONNÉES toutes les 10m")
+            Log.d("BloomGPS", "✅ ✅ SUIVI GPS ACTIF — Envoi toutes les 10m")
         } catch (e: SecurityException) {
             Log.e("BloomGPS", "❌ Permissions GPS manquantes", e)
             stopSelf()
@@ -69,33 +73,50 @@ class LocationTrackerService : Service() {
 
     private fun traiterNouvellePosition(location: Location) {
         if (!premierEnvoiFait) {
-            envoyerParDataSMS("BLOOMGPS:${location.latitude},${location.longitude},${location.speed}")
+            Log.d("BloomGPS", "📍 Première position : ${location.latitude}, ${location.longitude}")
+            envoyerPosition(location)
             dernierEnvoi = location
             premierEnvoiFait = true
-            Log.d("BloomGPS", "📤 1er ENVOI — SMS de DONNÉES")
             return
         }
 
         val dernier = dernierEnvoi
         if (dernier != null && location.distanceTo(dernier) >= 10) {
-            envoyerParDataSMS("BLOOMGPS:${location.latitude},${location.longitude},${location.speed}")
+            Log.d("BloomGPS", "📍 +10m — Envoi position...")
+            envoyerPosition(location)
             dernierEnvoi = location
-            Log.d("BloomGPS", "📤 +10m → SMS de DONNÉES envoyé")
         }
     }
 
-    private fun envoyerParDataSMS(contenu: String) {
+    private fun envoyerPosition(location: Location) {
         if (numeroDest.isEmpty()) {
             Log.w("BloomGPS", "⚠️ Aucun numéro de destination !")
             return
         }
+        
+        val contenu = "BLOOMGPS:${location.latitude},${location.longitude},${location.speed}"
+        val smsManager = SmsManager.getDefault()
+        var succes = false
+        
+        Log.d("BloomGPS", "📤 Envoi position à $numeroDest")
+        
+        // 📡 SMS de données
         try {
-            val smsManager = SmsManager.getDefault()
             val donnees = contenu.toByteArray(Charsets.UTF_8)
             smsManager.sendDataMessage(numeroDest, null, PORT_BLOOM.toShort(), donnees, null, null)
-            Log.d("BloomGPS", "✅ SMS DE DONNÉES envoyé à $numeroDest")
+            Log.d("BloomGPS", "✅ SMS DE DONNÉES envoyé")
+            succes = true
         } catch (e: Exception) {
-            Log.e("BloomGPS", "❌ Erreur envoi SMS de données", e)
+            Log.w("BloomGPS", "⚠️ SMS de données échoué", e)
+        }
+        
+        // 📩 SMS TEXTE de SECOURS
+        try {
+            smsManager.sendTextMessage(numeroDest, null, contenu, null, null)
+            Log.d("BloomGPS", "✅ SMS TEXTE de SECOURS envoyé")
+            succes = true
+        } catch (e: Exception) {
+            Log.e("BloomGPS", "❌ ÉCHEC envoi position", e)
         }
     }
 
@@ -128,7 +149,7 @@ class LocationTrackerService : Service() {
     private fun creerNotification(): Notification {
         return Notification.Builder(this, CHANNEL_ID)
             .setContentTitle("Bloom GPS")
-            .setContentText("Suivi actif — SMS de données 10m")
+            .setContentText("Suivi actif — Envoi toutes les 10m")
             .setSmallIcon(android.R.drawable.ic_menu_mylocation)
             .setPriority(Notification.PRIORITY_LOW)
             .setOngoing(true)

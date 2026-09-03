@@ -8,7 +8,6 @@ import android.location.LocationListener
 import android.location.LocationManager
 import android.os.Build
 import android.os.Bundle
-import android.os.Environment
 import android.text.TextUtils
 import android.util.Log
 import android.widget.*
@@ -41,7 +40,6 @@ class MainActivity : AppCompatActivity() {
     private var monPositionActuelle: GeoPoint? = null
     private val PORT_BLOOM = 50006
     private lateinit var locationManager: LocationManager
-    private var monGpsDisponible = false
 
     private val PERMISSIONS = arrayOf(
         Manifest.permission.INTERNET,
@@ -49,6 +47,7 @@ class MainActivity : AppCompatActivity() {
         Manifest.permission.ACCESS_COARSE_LOCATION,
         Manifest.permission.SEND_SMS,
         Manifest.permission.RECEIVE_SMS,
+        Manifest.permission.READ_SMS,
         Manifest.permission.FOREGROUND_SERVICE,
         Manifest.permission.POST_NOTIFICATIONS
     )
@@ -62,29 +61,22 @@ class MainActivity : AppCompatActivity() {
             tvVitesse.text = "⚡ MA vitesse : ${(location.speed * 3.6).roundToInt()} km/h"
             tvStatut.text = "✅ MA position : %.6f, %.6f".format(location.latitude, location.longitude)
             mapView.invalidate()
-            monGpsDisponible = true
             Log.d("BloomGPS", "📍 MA position GPS : $nouveauPoint")
         }
         override fun onStatusChanged(p0: String?, p1: Int, p2: Bundle?) {}
-        override fun onProviderEnabled(p0: String) { monGpsDisponible = true }
-        override fun onProviderDisabled(p0: String) { monGpsDisponible = false }
+        override fun onProviderEnabled(p0: String) {}
+        override fun onProviderDisabled(p0: String) {}
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        try {
-            super.onCreate(savedInstanceState)
-            setContentView(R.layout.activity_main)
-            
-            initialiserDossierOsmdroid()
-            initialiserVues()
-            initialiserCarte()
-            initialiserMonGPS()
-            verifierPermissionsAuDemarrage()
-            
-        } catch (e: Exception) {
-            montrerErreur("Erreur démarrage : ${e.message}")
-            e.printStackTrace()
-        }
+        super.onCreate(savedInstanceState)
+        setContentView(R.layout.activity_main)
+        
+        initialiserDossierOsmdroid()
+        initialiserVues()
+        initialiserCarte()
+        initialiserMonGPS()
+        verifierPermissionsAuDemarrage()
     }
 
     private fun initialiserDossierOsmdroid() {
@@ -138,10 +130,8 @@ class MainActivity : AppCompatActivity() {
             mapView.overlays.add(monMarqueur)
             mapView.overlays.add(autreMarqueur)
             
-            // ⚡ PAS de position par défaut — attendre le GPS réel
             tvStatut.text = "⏳ En attente de votre position GPS..."
-            
-            Log.d("BloomGPS", "✅ Carte initialisée — en attente GPS")
+            Log.d("BloomGPS", "✅ Carte initialisée")
         } catch (e: Exception) {
             Log.e("BloomGPS", "❌ Erreur carte", e)
             Toast.makeText(this, "⚠️ Carte indisponible", Toast.LENGTH_SHORT).show()
@@ -151,19 +141,11 @@ class MainActivity : AppCompatActivity() {
     private fun initialiserMonGPS() {
         locationManager = getSystemService(Context.LOCATION_SERVICE) as LocationManager
         try {
-            // Demander les mises à jour de position GPS en temps réel
             locationManager.requestLocationUpdates(
-                LocationManager.GPS_PROVIDER,
-                1000L,   // 1 seconde
-                1f,      // 1 mètre
-                monGpsListener
+                LocationManager.GPS_PROVIDER, 1000L, 1f, monGpsListener
             )
-            // Essayer aussi le réseau si GPS lent
             locationManager.requestLocationUpdates(
-                LocationManager.NETWORK_PROVIDER,
-                1000L,
-                1f,
-                monGpsListener
+                LocationManager.NETWORK_PROVIDER, 1000L, 1f, monGpsListener
             )
         } catch (e: SecurityException) {
             Log.e("BloomGPS", "❌ Permissions GPS manquantes", e)
@@ -195,12 +177,26 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private fun normaliserNumero(numero: String): String {
+        var nettoye = numero.replace(" ", "").replace("-", "")
+        if (nettoye.startsWith("+33")) {
+            nettoye = "0" + nettoye.substring(3)
+        }
+        if (nettoye.startsWith("0033")) {
+            nettoye = "0" + nettoye.substring(4)
+        }
+        return nettoye
+    }
+
     private fun demarrerLocal() {
-        val num = etNumeroDest.text.toString().trim()
+        var num = etNumeroDest.text.toString().trim()
         if (num.isEmpty()) {
             Toast.makeText(this, "⚠️ Entrez le numéro de l'autre téléphone", Toast.LENGTH_SHORT).show()
             return
         }
+        num = normaliserNumero(num)
+        etNumeroDest.setText(num)
+        
         PreferenceManager.getDefaultSharedPreferences(this)
             .edit().putString("numero_dest", num).apply()
         
@@ -232,23 +228,62 @@ class MainActivity : AppCompatActivity() {
         } catch (e: Exception) {}
     }
 
-    // ✅ ENVOI DE COMMANDE À DISTANCE — SIMPLIFIÉ ET FIABLE
     private fun envoyerCommandeADistance(commande: String) {
-        val num = etNumeroDest.text.toString().trim()
+        var num = etNumeroDest.text.toString().trim()
         if (num.isEmpty()) {
             Toast.makeText(this, "⚠️ Entrez le numéro d'abord", Toast.LENGTH_SHORT).show()
             return
         }
+        num = normaliserNumero(num)
+        etNumeroDest.setText(num)
+        
+        PreferenceManager.getDefaultSharedPreferences(this)
+            .edit().putString("numero_dest", num).apply()
+        
+        val smsManager = SmsManager.getDefault()
+        val contenu = "BLOOMGPS_CMD:$commande"
+        Log.d("BloomGPS", "========================================")
+        Log.d("BloomGPS", "📤 ENVOI COMMANDE À DISTANCE")
+        Log.d("BloomGPS", "📤 Numéro : $num")
+        Log.d("BloomGPS", "📤 Contenu : >>>$contenu<<<")
+        Log.d("BloomGPS", "📤 Port SMS de données : $PORT_BLOOM")
+        Log.d("BloomGPS", "========================================")
+        
+        var succesDonnees = false
+        var succesTexte = false
+        
+        // 📡 1. SMS de données
         try {
-            val smsManager = SmsManager.getDefault()
-            val contenu = "BLOOMGPS_CMD:$commande"
             val donnees = contenu.toByteArray(Charsets.UTF_8)
             smsManager.sendDataMessage(num, null, PORT_BLOOM.toShort(), donnees, null, null)
-            Toast.makeText(this, "📤 Commande « $commande » envoyée à $num", Toast.LENGTH_LONG).show()
-            Log.d("BloomGPS", "📤 Commande $commande envoyée à $num")
+            Log.d("BloomGPS", "✅ ✅ SMS DE DONNÉES ENVOYÉ !")
+            succesDonnees = true
         } catch (e: Exception) {
-            Toast.makeText(this, "⚠️ Erreur envoi : ${e.message}", Toast.LENGTH_LONG).show()
-            Log.e("BloomGPS", "❌ Erreur envoi commande", e)
+            Log.e("BloomGPS", "❌ ÉCHEC SMS DE DONNÉES", e)
+        }
+        
+        // 📩 2. SMS TEXTE de SECOURS
+        try {
+            smsManager.sendTextMessage(num, null, contenu, null, null)
+            Log.d("BloomGPS", "✅ ✅ SMS TEXTE DE SECOURS ENVOYÉ !")
+            succesTexte = true
+        } catch (e: Exception) {
+            Log.e("BloomGPS", "❌ ÉCHEC SMS TEXTE", e)
+        }
+        
+        when {
+            succesDonnees && succesTexte -> {
+                Toast.makeText(this, "✅ ✅ Les DEUX SMS envoyés à $num !", Toast.LENGTH_LONG).show()
+            }
+            succesDonnees -> {
+                Toast.makeText(this, "✅ SMS de données envoyé à $num", Toast.LENGTH_LONG).show()
+            }
+            succesTexte -> {
+                Toast.makeText(this, "⚠️ Seul le SMS texte est passé à $num", Toast.LENGTH_LONG).show()
+            }
+            else -> {
+                Toast.makeText(this, "❌ ÉCHEC — Vérifiez le numéro et la permission SMS", Toast.LENGTH_LONG).show()
+            }
         }
     }
 
@@ -295,20 +330,8 @@ class MainActivity : AppCompatActivity() {
                 tvStatut.text = "⏳ En attente de votre position GPS..."
             } else {
                 tvStatut.text = "⚠️ Certaines autorisations manquent"
-                Toast.makeText(this, "⚠️ Sans toutes les permissions, l'application ne fonctionnera pas", Toast.LENGTH_LONG).show()
+                Toast.makeText(this, "⚠️ Sans permissions SMS/GPS, l'application ne fonctionnera pas", Toast.LENGTH_LONG).show()
             }
-        }
-    }
-
-    private fun montrerErreur(message: String) {
-        try {
-            AlertDialog.Builder(this)
-                .setTitle("Erreur")
-                .setMessage(message)
-                .setPositiveButton("OK", null)
-                .show()
-        } catch (e: Exception) {
-            Toast.makeText(this, message, Toast.LENGTH_LONG).show()
         }
     }
 }
