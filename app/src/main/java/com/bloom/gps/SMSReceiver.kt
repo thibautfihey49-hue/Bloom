@@ -17,11 +17,11 @@ class SMSReceiver : BroadcastReceiver() {
             SmsMessage.createFromPdu(pdus[0] as ByteArray)
         }
         
-        val port = intent.extras?.getInt("port", 0) ?: 0
-        if (port != 10001) return
-        
         val corps = message.messageBody ?: return
-        val parts = corps.split(",")
+        if (!corps.startsWith("BLOOMGPS:")) return
+        
+        val contenu = corps.removePrefix("BLOOMGPS:")
+        val parts = contenu.split(",")
         if (parts.size >= 3) {
             try {
                 val lat = parts[0].toDouble()
@@ -34,6 +34,7 @@ class SMSReceiver : BroadcastReceiver() {
                     putExtra("speed", vitesse)
                 }
                 context.sendBroadcast(updateIntent)
+                abortBroadcast() // ✅ CACHE LE SMS DANS LA MESSAGERIE !
             } catch (e: NumberFormatException) {}
         }
     }

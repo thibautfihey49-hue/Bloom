@@ -186,11 +186,9 @@ class MainActivity : AppCompatActivity() {
         getSharedPreferences("BloomGPS", Context.MODE_PRIVATE).edit().putString("numero_dest", num).apply()
         
         val smsManager = SmsManager.getDefault()
-        val port: Short = 10002
-        val data = commande.toByteArray(Charsets.UTF_8)
-        val pi: PendingIntent? = null
-        // ✅ Port = Short, pas Int !
-        smsManager.sendDataMessage(num, null, port, data, pi)
+        val message = "BLOOMGPS_CMD:$commande"
+        // ✅ sendTextMessage = 3 paramètres SIMPLES !
+        smsManager.sendTextMessage(num, null, message, null, null)
         Toast.makeText(this, "📤 Commande '$commande' envoyée à distance", Toast.LENGTH_SHORT).show()
     }
 

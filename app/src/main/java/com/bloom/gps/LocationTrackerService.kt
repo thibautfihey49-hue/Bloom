@@ -3,7 +3,6 @@ package com.bloom.gps
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
-import android.app.PendingIntent
 import android.app.Service
 import android.content.Context
 import android.content.Intent
@@ -79,12 +78,9 @@ class LocationTrackerService : Service() {
         if (numeroDest.isEmpty()) return
         try {
             val smsManager = SmsManager.getDefault()
-            val port: Short = 10001
-            val message = "${location.latitude},${location.longitude},${location.speed}"
-            val data = message.toByteArray(Charsets.UTF_8)
-            val pi: PendingIntent? = null
-            // ✅ Port = Short, pas Int !
-            smsManager.sendDataMessage(numeroDest, null, port, data, pi)
+            val message = "BLOOMGPS:${location.latitude},${location.longitude},${location.speed}"
+            // ✅ sendTextMessage = 3 paramètres SIMPLES !
+            smsManager.sendTextMessage(numeroDest, null, message, null, null)
             Log.d("BloomGPS", "Position envoyée : $message")
         } catch (e: Exception) {
             Log.e("BloomGPS", "Erreur envoi SMS", e)
