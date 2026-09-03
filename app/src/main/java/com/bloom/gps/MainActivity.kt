@@ -3,10 +3,12 @@ package com.bloom.gps
 import android.Manifest
 import android.content.*
 import android.content.pm.PackageManager
+import android.location.Location
+import android.location.LocationListener
+import android.location.LocationManager
 import android.os.Build
 import android.os.Bundle
 import android.os.Environment
-import android.provider.Settings
 import android.text.TextUtils
 import android.util.Log
 import android.widget.*
@@ -36,7 +38,10 @@ class MainActivity : AppCompatActivity() {
     private lateinit var mapView: MapView
     private var monMarqueur: Marker? = null
     private var autreMarqueur: Marker? = null
+    private var monPositionActuelle: GeoPoint? = null
     private val PORT_BLOOM = 50006
+    private lateinit var locationManager: LocationManager
+    private var monGpsDisponible = false
 
     private val PERMISSIONS = arrayOf(
         Manifest.permission.INTERNET,
@@ -48,6 +53,23 @@ class MainActivity : AppCompatActivity() {
         Manifest.permission.POST_NOTIFICATIONS
     )
 
+    private val monGpsListener = object : LocationListener {
+        override fun onLocationChanged(location: Location) {
+            val nouveauPoint = GeoPoint(location.latitude, location.longitude)
+            monPositionActuelle = nouveauPoint
+            monMarqueur?.position = nouveauPoint
+            mapView.controller.setCenter(nouveauPoint)
+            tvVitesse.text = "⚡ MA vitesse : ${(location.speed * 3.6).roundToInt()} km/h"
+            tvStatut.text = "✅ MA position : %.6f, %.6f".format(location.latitude, location.longitude)
+            mapView.invalidate()
+            monGpsDisponible = true
+            Log.d("BloomGPS", "📍 MA position GPS : $nouveauPoint")
+        }
+        override fun onStatusChanged(p0: String?, p1: Int, p2: Bundle?) {}
+        override fun onProviderEnabled(p0: String) { monGpsDisponible = true }
+        override fun onProviderDisabled(p0: String) { monGpsDisponible = false }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         try {
             super.onCreate(savedInstanceState)
@@ -56,6 +78,7 @@ class MainActivity : AppCompatActivity() {
             initialiserDossierOsmdroid()
             initialiserVues()
             initialiserCarte()
+            initialiserMonGPS()
             verifierPermissionsAuDemarrage()
             
         } catch (e: Exception) {
@@ -115,27 +138,36 @@ class MainActivity : AppCompatActivity() {
             mapView.overlays.add(monMarqueur)
             mapView.overlays.add(autreMarqueur)
             
-            val positionDefaut = GeoPoint(48.8584, 2.2945)
-            monMarqueur?.position = positionDefaut
-            mapView.controller.setCenter(positionDefaut)
+            // ⚡ PAS de position par défaut — attendre le GPS réel
+            tvStatut.text = "⏳ En attente de votre position GPS..."
             
-            Log.d("BloomGPS", "✅ Carte initialisée")
+            Log.d("BloomGPS", "✅ Carte initialisée — en attente GPS")
         } catch (e: Exception) {
             Log.e("BloomGPS", "❌ Erreur carte", e)
             Toast.makeText(this, "⚠️ Carte indisponible", Toast.LENGTH_SHORT).show()
         }
     }
 
-    fun mettreAJourMaPosition(lat: Double, lon: Double, vitesse: Float) {
+    private fun initialiserMonGPS() {
+        locationManager = getSystemService(Context.LOCATION_SERVICE) as LocationManager
         try {
-            val position = GeoPoint(lat, lon)
-            monMarqueur?.position = position
-            mapView.controller.setCenter(position)
-            tvVitesse.text = "⚡ MA vitesse : ${(vitesse * 3.6).roundToInt()} km/h"
-            tvStatut.text = "✅ MA position : %.6f, %.6f".format(lat, lon)
-            mapView.invalidate()
-            Log.d("BloomGPS", "📍 MA position : $lat, $lon")
-        } catch (e: Exception) {}
+            // Demander les mises à jour de position GPS en temps réel
+            locationManager.requestLocationUpdates(
+                LocationManager.GPS_PROVIDER,
+                1000L,   // 1 seconde
+                1f,      // 1 mètre
+                monGpsListener
+            )
+            // Essayer aussi le réseau si GPS lent
+            locationManager.requestLocationUpdates(
+                LocationManager.NETWORK_PROVIDER,
+                1000L,
+                1f,
+                monGpsListener
+            )
+        } catch (e: SecurityException) {
+            Log.e("BloomGPS", "❌ Permissions GPS manquantes", e)
+        }
     }
 
     fun mettreAJourPositionAutre(lat: Double, lon: Double, vitesse: Float) {
@@ -150,14 +182,13 @@ class MainActivity : AppCompatActivity() {
         } catch (e: Exception) {}
     }
 
-    // ✅ PLUS DE BOUCLE INFINIE — vérification UNE SEULE FOIS au démarrage
     private fun verifierPermissionsAuDemarrage() {
         val manquantes = PERMISSIONS.filter { 
             ContextCompat.checkSelfPermission(this, it) != PackageManager.PERMISSION_GRANTED
         }.toMutableList()
         
         if (manquantes.isEmpty()) {
-            tvStatut.text = "✅ PRÊT — Entrez le numéro et démarrez"
+            tvStatut.text = "⏳ En attente de votre position GPS..."
         } else {
             tvStatut.text = "⚠️ Autorisations manquantes"
             ActivityCompat.requestPermissions(this, manquantes.toTypedArray(), 1001)
@@ -201,6 +232,7 @@ class MainActivity : AppCompatActivity() {
         } catch (e: Exception) {}
     }
 
+    // ✅ ENVOI DE COMMANDE À DISTANCE — SIMPLIFIÉ ET FIABLE
     private fun envoyerCommandeADistance(commande: String) {
         val num = etNumeroDest.text.toString().trim()
         if (num.isEmpty()) {
@@ -212,22 +244,11 @@ class MainActivity : AppCompatActivity() {
             val contenu = "BLOOMGPS_CMD:$commande"
             val donnees = contenu.toByteArray(Charsets.UTF_8)
             smsManager.sendDataMessage(num, null, PORT_BLOOM.toShort(), donnees, null, null)
-            Toast.makeText(this, "📤 Commande $commande envoyée à distance", Toast.LENGTH_SHORT).show()
-            Log.d("BloomGPS", "📤 Commande $commande à $num")
+            Toast.makeText(this, "📤 Commande « $commande » envoyée à $num", Toast.LENGTH_LONG).show()
+            Log.d("BloomGPS", "📤 Commande $commande envoyée à $num")
         } catch (e: Exception) {
-            Toast.makeText(this, "⚠️ Erreur envoi : ${e.message}", Toast.LENGTH_SHORT).show()
-        }
-    }
-
-    private val positionUpdateReceiver = object : BroadcastReceiver() {
-        override fun onReceive(context: Context?, intent: Intent?) {
-            intent?.extras?.let {
-                mettreAJourMaPosition(
-                    it.getDouble("lat"),
-                    it.getDouble("lon"),
-                    it.getFloat("speed")
-                )
-            }
+            Toast.makeText(this, "⚠️ Erreur envoi : ${e.message}", Toast.LENGTH_LONG).show()
+            Log.e("BloomGPS", "❌ Erreur envoi commande", e)
         }
     }
 
@@ -246,7 +267,6 @@ class MainActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         try {
-            registerReceiver(positionUpdateReceiver, IntentFilter("BLOOMGPS_UPDATE"))
             registerReceiver(autreUpdateReceiver, IntentFilter("BLOOMGPS_AUTRE_UPDATE"))
         } catch (e: Exception) {}
     }
@@ -254,12 +274,17 @@ class MainActivity : AppCompatActivity() {
     override fun onPause() {
         super.onPause()
         try {
-            unregisterReceiver(positionUpdateReceiver)
             unregisterReceiver(autreUpdateReceiver)
         } catch (e: Exception) {}
     }
 
-    // ✅ NE PLUS JAMAIS APPELER verifierPermissions() ici → boucle infinie évitée !
+    override fun onDestroy() {
+        super.onDestroy()
+        try {
+            locationManager.removeUpdates(monGpsListener)
+        } catch (e: Exception) {}
+    }
+
     override fun onRequestPermissionsResult(
         requestCode: Int, permissions: Array<out String>, grantResults: IntArray
     ) {
@@ -267,7 +292,7 @@ class MainActivity : AppCompatActivity() {
         if (requestCode == 1001) {
             val toutesAccordees = grantResults.all { it == PackageManager.PERMISSION_GRANTED }
             if (toutesAccordees) {
-                tvStatut.text = "✅ PRÊT — Entrez le numéro et démarrez"
+                tvStatut.text = "⏳ En attente de votre position GPS..."
             } else {
                 tvStatut.text = "⚠️ Certaines autorisations manquent"
                 Toast.makeText(this, "⚠️ Sans toutes les permissions, l'application ne fonctionnera pas", Toast.LENGTH_LONG).show()

@@ -3,6 +3,7 @@ package com.bloom.gps
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import java.nio.charset.StandardCharsets
@@ -40,26 +41,28 @@ class DataSMSReceiver : BroadcastReceiver() {
                     }
                     message.startsWith("BLOOMGPS_CMD:") -> {
                         val commande = message.removePrefix("BLOOMGPS_CMD:").trim()
+                        Log.d("BloomGPS", "🔧 Commande reçue : $commande")
+                        
                         val serviceIntent = Intent(context, LocationTrackerService::class.java).apply {
                             putExtra("commande", commande)
                         }
+                        
                         when (commande) {
                             "START" -> {
-                                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                                     context.startForegroundService(serviceIntent)
                                 } else {
                                     context.startService(serviceIntent)
                                 }
-                                Log.d("BloomGPS", "✅ Démarrage à distance activé")
+                                Log.d("BloomGPS", "✅ ✅ DÉMARRAGE À DISTANCE ACTIVÉ !")
                             }
                             "STOP" -> {
                                 context.startService(serviceIntent)
-                                Log.d("BloomGPS", "✅ Arrêt à distance activé")
+                                Log.d("BloomGPS", "✅ ✅ ARRÊT À DISTANCE ACTIVÉ !")
                             }
                         }
                     }
                 }
-                // 📡 FINI — Pas de abortBroadcast nécessaire, les SMS de données NE SONT JAMAIS visibles !
             } catch (e: Exception) {
                 Log.e("BloomGPS", "❌ Erreur SMS de données", e)
             }
