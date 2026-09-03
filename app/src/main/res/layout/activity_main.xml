@@ -1,167 +1,45 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:background="@color/gray_200">
+    android:padding="16dp"
+    android:background="#121212">
 
-    <LinearLayout
+    <TextView
+        android:id="@+id/tvStatut"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:padding="8dp"
-        android:background="@color/white"
-        android:gravity="end">
-
-        <TextView
-            android:id="@+id/tvStatut"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="✅ Prêt — entrez les numéros"
-            android:textSize="14sp"
-            android:textColor="@color/purple_500"
-            android:gravity="center"/>
-
-        <ImageButton
-            android:id="@+id/btnHideApp"
-            android:layout_width="45dp"
-            android:layout_height="45dp"
-            android:src="@android:drawable/ic_menu_save"
-            android:backgroundTint="@color/green_500"
-            android:contentDescription="Cacher l'application"
-            android:padding="8dp"/>
-    </LinearLayout>
-
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="vertical"
+        android:text="🔄 Vérification des permissions..."
+        android:textColor="#FFFFFF"
+        android:textSize="16sp"
         android:padding="12dp"
-        android:background="@color/white"
-        android:layout_marginTop="1dp">
+        android:background="#1E1E1E"
+        android:layout_marginBottom="16dp"/>
 
-        <TextView
-            android:id="@+id/tvMoi"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="🔵 MOI: —"
-            android:textSize="12sp"
-            android:textColor="@color/blue_500"/>
+    <Button
+        android:id="@+id/btnPermissions"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="🔐 Accorder toutes les permissions"
+        android:background="#4CAF50"
+        android:textColor="#FFFFFF"
+        android:layout_marginBottom="8dp"/>
 
-        <TextView
-            android:id="@+id/tvLui"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="🔴 LUI: —"
-            android:textSize="12sp"
-            android:textColor="@color/red_500"
-            android:layout_marginTop="4dp"/>
-
-        <!-- ✅ AFFICHAGE DE LA VITESSE DE L'AUTRE -->
-        <TextView
-            android:id="@+id/tvVitesseLui"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="⚡ VITESSE LUI: — km/h"
-            android:textSize="14sp"
-            android:textStyle="bold"
-            android:textColor="@color/vitesse"
-            android:layout_marginTop="4dp"/>
-
-        <TextView
-            android:id="@+id/tvDistance"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="📡 Dernier envoi: —"
-            android:textSize="11sp"
-            android:textColor="@color/orange_500"
-            android:layout_marginTop="4dp"/>
-    </LinearLayout>
+    <Button
+        android:id="@+id/btnNotif"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="🔔 Autoriser lecture notifications"
+        android:background="#9C27B0"
+        android:textColor="#FFFFFF"
+        android:layout_marginBottom="16dp"/>
 
     <org.osmdroid.views.MapView
         android:id="@+id/mapView"
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"/>
-
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:padding="12dp"
-        android:background="@color/white">
-
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="📱 Mon numéro (+336...)"
-            android:textSize="12sp"
-            android:textColor="@color/purple_500"/>
-        <EditText
-            android:id="@+id/etMonNumero"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:hint="+336123456789"
-            android:inputType="phone"
-            android:textSize="14sp"
-            android:padding="8dp"
-            android:layout_marginBottom="8dp"/>
-
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="📱 Numéro de l'autre"
-            android:textSize="12sp"
-            android:textColor="@color/red_500"/>
-        <EditText
-            android:id="@+id/etAutreNumero"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:hint="+33698765432"
-            android:inputType="phone"
-            android:textSize="14sp"
-            android:padding="8dp"/>
-    </LinearLayout>
-
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:padding="16dp"
-        android:background="#F0F4FF">
-
-        <Button
-            android:id="@+id/btnStart"
-            android:layout_width="0dp"
-            android:layout_height="70dp"
-            android:layout_weight="1"
-            android:text="▶️ DÉMARRER LE SUIVI"
-            android:textSize="14sp"
-            android:textStyle="bold"
-            android:backgroundTint="@color/green_500"
-            android:layout_marginEnd="8dp"/>
-
-        <Button
-            android:id="@+id/btnStop"
-            android:layout_width="0dp"
-            android:layout_height="70dp"
-            android:layout_weight="1"
-            android:text="⏹️ ARRÊTER TOUT"
-            android:textSize="14sp"
-            android:textStyle="bold"
-            android:backgroundTint="@color/red_500"
-            android:layout_marginStart="8dp"/>
-    </LinearLayout>
-
-    <Button
-        android:id="@+id/btnPermissions"
-        android:layout_width="match_parent"
-        android:layout_height="45dp"
-        android:text="🔑 Accorder les permissions"
-        android:textSize="13sp"
-        android:backgroundTint="@color/purple_500"
-        android:layout_marginHorizontal="16dp"
-        android:layout_marginBottom="16dp"/>
 
 </LinearLayout>

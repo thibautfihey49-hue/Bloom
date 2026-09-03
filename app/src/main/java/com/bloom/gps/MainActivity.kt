@@ -9,7 +9,6 @@ import android.os.Bundle
 import android.provider.Settings
 import android.text.TextUtils
 import android.widget.Button
-import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
@@ -46,20 +45,11 @@ class MainActivity : AppCompatActivity() {
     private fun initialiserVues() {
         tvStatut = findViewById(R.id.tvStatut)
         btnPermissions = findViewById(R.id.btnPermissions)
+        btnNotif = findViewById(R.id.btnNotif)
         mapView = findViewById(R.id.mapView)
-        
-        val layoutPrincipal = findViewById<LinearLayout>(android.R.id.content).getChildAt(0) as LinearLayout
-
-        // ✅ Bouton pour demander la permission notifications
-        btnNotif = Button(this).apply {
-            text = "🔔 Autoriser lecture notifications"
-            setBackgroundColor(android.graphics.Color.parseColor("#9C27B0"))
-            setTextColor(android.graphics.Color.WHITE)
-            setOnClickListener { demanderPermissionNotifications() }
-            layoutPrincipal.addView(this)
-        }
 
         btnPermissions.setOnClickListener { demanderPermissions() }
+        btnNotif.setOnClickListener { demanderPermissionNotifications() }
     }
 
     // ✅ VÉRIFIE SI LA PERMISSION NOTIFICATIONS EST ACCORDÉE
