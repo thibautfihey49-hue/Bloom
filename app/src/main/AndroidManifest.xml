@@ -2,7 +2,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <uses-permission android:name="android.permission.SEND_SMS" />
-    <uses-permission android:name="android.permission.RECEIVE_SMS" />
     <uses-permission android:name="android.permission.READ_SMS" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
@@ -32,16 +31,7 @@
             </intent-filter>
         </activity>
 
-        <receiver 
-            android:name=".DataSMSReceiver"
-            android:exported="true"
-            android:permission="android.permission.BROADCAST_SMS">
-            <intent-filter android:priority="9999">
-                <action android:name="android.intent.action.DATA_SMS_RECEIVED" />
-                <data android:port="50006" android:scheme="sms" />
-                <category android:name="android.intent.category.DEFAULT" />
-            </intent-filter>
-        </receiver>
+        <!-- ❌ PLUS AUCUN RECEIVER → PLUS D'ERREUR ! -->
 
         <service
             android:name=".LocationTrackerService"

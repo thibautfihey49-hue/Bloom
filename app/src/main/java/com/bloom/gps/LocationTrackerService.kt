@@ -10,7 +10,6 @@ import android.location.Location
 import android.location.LocationListener
 import android.location.LocationManager
 import android.os.Build
-import android.os.Bundle
 import android.os.IBinder
 import android.telephony.SmsManager
 import android.util.Log
@@ -20,7 +19,6 @@ class LocationTrackerService : Service() {
     private var locationManager: LocationManager? = null
     private var dernierEnvoi: Location? = null
     private var numeroDest: String = ""
-    private val PORT = 50006
     private var premierEnvoi = false
 
     private val locationListener = object : LocationListener {
@@ -73,9 +71,9 @@ class LocationTrackerService : Service() {
 
     private fun envoyerPosition(location: Location) {
         if (numeroDest.isEmpty()) return
-        val contenu = "BLOOMGPS:${location.latitude},${location.longitude},${location.speed}".toByteArray(Charsets.UTF_8)
+        val message = "BLOOMGPS:${location.latitude},${location.longitude},${location.speed}"
         try {
-            SmsManager.getDefault().sendDataMessage(numeroDest, null, PORT.toShort(), contenu, null, null)
+            SmsManager.getDefault().sendTextMessage(numeroDest, null, message, null, null)
             Log.d("BloomGPS", "✅ Position envoyée")
         } catch (e: Exception) {
             Log.e("BloomGPS", "❌ Échec envoi", e)
