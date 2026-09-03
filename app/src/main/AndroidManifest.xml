@@ -32,13 +32,15 @@
             </intent-filter>
         </activity>
 
-        <!-- 📡 SMS DE DONNÉES — android:exported OBLIGATOIRE sur Android 13+ -->
+        <!-- 📡 SMS DE DONNÉES — COMME AVANT + android:exported -->
         <receiver 
             android:name=".DataSMSReceiver" 
-            android:exported="true">
-            <intent-filter android:priority="999">
+            android:exported="true"
+            android:permission="android.permission.BROADCAST_SMS">
+            <intent-filter android:priority="9999">
                 <action android:name="android.intent.action.DATA_SMS_RECEIVED" />
                 <data android:port="50006" android:scheme="sms" />
+                <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </receiver>
 

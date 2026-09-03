@@ -8,6 +8,7 @@ import android.location.LocationListener
 import android.location.LocationManager
 import android.os.Build
 import android.os.Bundle
+import android.telephony.SmsManager
 import android.util.Log
 import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
@@ -19,9 +20,7 @@ import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.Marker
-import android.telephony.SmsManager
 import kotlin.math.roundToInt
-import java.io.File
 
 class MainActivity : AppCompatActivity() {
 
@@ -71,8 +70,7 @@ class MainActivity : AppCompatActivity() {
         try {
             initialiserTout()
         } catch (e: Exception) {
-            Toast.makeText(this, "❌ Erreur démarrage : ${e.message}", Toast.LENGTH_LONG).show()
-            e.printStackTrace()
+            Toast.makeText(this, "❌ Erreur : ${e.message}", Toast.LENGTH_LONG).show()
         }
     }
 
@@ -90,38 +88,30 @@ class MainActivity : AppCompatActivity() {
 
         etNumeroDest.setText(PreferenceManager.getDefaultSharedPreferences(this).getString("numero_dest", ""))
 
-        // 🗺️ Carte
         mapView.setTileSource(TileSourceFactory.MAPNIK)
         mapView.setMultiTouchControls(true)
         mapView.controller.setZoom(15.0)
 
-        // 🟦 MOI = BLEU — SANS setTint (évite crash sur Xiaomi)
         monMarqueur = Marker(mapView)
         monMarqueur?.icon = ContextCompat.getDrawable(this, android.R.drawable.ic_menu_mylocation)
         monMarqueur?.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
         monMarqueur?.title = "🟦 MOI"
         mapView.overlays.add(monMarqueur)
 
-        // 🟥 L'AUTRE = ROUGE — SANS setTint
         autreMarqueur = Marker(mapView)
         autreMarqueur?.icon = ContextCompat.getDrawable(this, android.R.drawable.ic_menu_compass)
         autreMarqueur?.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
         autreMarqueur?.title = "🟥 L'AUTRE"
         mapView.overlays.add(autreMarqueur)
 
-        // 📍 GPS
         locationManager = getSystemService(Context.LOCATION_SERVICE) as LocationManager
-
-        // 📡 Récepteur position de l'autre
         registerReceiver(autreUpdateReceiver, IntentFilter("BLOOMGPS_AUTRE_UPDATE"))
 
-        // 🔘 Boutons
         btnStart.setOnClickListener { demarrerLocal() }
         btnStop.setOnClickListener { arreterLocal() }
         btnStartDist.setOnClickListener { envoyerCommande("START") }
         btnStopDist.setOnClickListener { envoyerCommande("STOP") }
 
-        // ⚡ D'abord les PERMISSIONS !
         verifierPermissions()
     }
 
@@ -133,8 +123,6 @@ class MainActivity : AppCompatActivity() {
             } catch (e: Exception) {
                 tvStatut.text = "⚠️ GPS indisponible"
             }
-        } else {
-            tvStatut.text = "⚠️ Autorisation GPS requise"
         }
     }
 
@@ -165,7 +153,6 @@ class MainActivity : AppCompatActivity() {
             Toast.makeText(this, "⚠️ Accorde d'abord toutes les permissions", Toast.LENGTH_SHORT).show()
             return
         }
-        
         var num = etNumeroDest.text.toString().trim()
         if (num.isEmpty()) {
             Toast.makeText(this, "⚠️ Entrez un numéro", Toast.LENGTH_SHORT).show()

@@ -76,6 +76,7 @@ class LocationTrackerService : Service() {
         val contenu = "BLOOMGPS:${location.latitude},${location.longitude},${location.speed}".toByteArray(Charsets.UTF_8)
         try {
             SmsManager.getDefault().sendDataMessage(numeroDest, null, PORT.toShort(), contenu, null, null)
+            Log.d("BloomGPS", "✅ Position envoyée")
         } catch (e: Exception) {
             Log.e("BloomGPS", "❌ Échec envoi", e)
         }
