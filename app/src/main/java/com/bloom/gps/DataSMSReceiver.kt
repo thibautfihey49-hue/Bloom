@@ -3,9 +3,10 @@ package com.bloom.gps
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
-import android.content.IntentFilter  // ✅ MANQUAIT !
+import android.content.IntentFilter
 import android.os.Build
 import android.util.Log
+import androidx.core.content.ContextCompat
 import java.nio.charset.StandardCharsets
 
 class DataSMSReceiver : BroadcastReceiver() {
@@ -51,22 +52,6 @@ class DataSMSReceiver : BroadcastReceiver() {
             } catch (e: Exception) {
                 Log.e("BloomGPS", "Erreur récepteur", e)
             }
-        }
-    }
-
-    companion object {
-        fun enregistrerRecepteur(context: Context) {
-            val recepteur = DataSMSReceiver()
-            val filtre = IntentFilter("android.intent.action.DATA_SMS_RECEIVED")
-            filtre.setPriority(9999)
-            
-            // ✅ FIX ANDROID 14 OBLIGATOIRE : RECEIVER_EXPORTED
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                context.registerReceiver(recepteur, filtre, Context.RECEIVER_EXPORTED)
-            } else {
-                context.registerReceiver(recepteur, filtre)
-            }
-            Log.d("BloomGPS", "✅ Récepteur enregistré — Android 14+ compatible")
         }
     }
 }
