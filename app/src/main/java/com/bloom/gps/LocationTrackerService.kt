@@ -17,7 +17,7 @@ import android.util.Log
 
 class LocationTrackerService : Service() {
     private val CHANNEL_ID = "BloomGPS_Service"
-    private val PORT: Short = 50006
+    private val PORT = 50006.toShort()
     private var locationManager: LocationManager? = null
     private var dernierEnvoi: Location? = null
     private var numeroDest: String = ""
@@ -57,7 +57,7 @@ class LocationTrackerService : Service() {
     private fun demarrerSuivi() {
         if (estActif) return
         creerCanalNotification()
-        startForeground(1, creerNotification())
+        startForeground(1, creerNotificationSilencieuse())
         premierEnvoi = false
         dernierEnvoi = null
         estActif = true
@@ -101,19 +101,22 @@ class LocationTrackerService : Service() {
             val channel = NotificationChannel(CHANNEL_ID, "Bloom GPS", NotificationManager.IMPORTANCE_LOW)
             channel.setShowBadge(false)
             channel.enableVibration(false)
+            channel.enableLights(false)
+            channel.setSound(null, null)
             val nm = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
             nm.createNotificationChannel(channel)
         }
     }
 
-    private fun creerNotification(): Notification {
+    private fun creerNotificationSilencieuse(): Notification {
         return Notification.Builder(this, CHANNEL_ID)
             .setContentTitle("Bloom GPS")
-            .setContentText("Suivi en cours")
+            .setContentText("Suivi en arrière-plan")
             .setSmallIcon(android.R.drawable.ic_menu_mylocation)
             .setPriority(Notification.PRIORITY_LOW)
             .setOngoing(true)
-            .setSilent(true)
+            .setVibrate(longArrayOf(0))
+            .setSound(null)
             .build()
     }
 

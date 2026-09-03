@@ -37,7 +37,7 @@ class MainActivity : AppCompatActivity() {
     private var monMarqueur: Marker? = null
     private var autreMarqueur: Marker? = null
     private var locationManager: LocationManager? = null
-    private val PORT: Short = 50006
+    private val PORT = 50006.toShort()
     private var permissionsOk = false
     private val handler = Handler(Looper.getMainLooper())
 

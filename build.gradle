@@ -9,10 +9,7 @@ buildscript {
     }
 }
 allprojects {
-    repositories {
-        google()
-        mavenCentral()
-    }
+    repositoriesMode.set(RepositoriesMode.PREFER_SETTINGS)
 }
 task clean(type: Delete) {
     delete rootProject.buildDir
