@@ -32,7 +32,6 @@
             </intent-filter>
         </activity>
 
-        <!-- 📡 SMS DE DONNÉES — EXPORTED = true, SANS permission conflicte -->
         <receiver 
             android:name=".DataSMSReceiver"
             android:exported="true">

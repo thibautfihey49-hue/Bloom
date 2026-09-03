@@ -9,6 +9,7 @@ import android.location.LocationManager
 import android.os.Build
 import android.os.Bundle
 import android.telephony.SmsManager
+import android.util.Log
 import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
@@ -30,10 +31,10 @@ class MainActivity : AppCompatActivity() {
     private lateinit var btnStartDist: Button
     private lateinit var btnStopDist: Button
     private lateinit var etNumeroDest: EditText
-    private lateinit var mapView: MapView
+    private var mapView: MapView? = null
     private var monMarqueur: Marker? = null
     private var autreMarqueur: Marker? = null
-    private lateinit var locationManager: LocationManager
+    private var locationManager: LocationManager? = null
     private val PORT = 50006
     private var permissionsOk = false
 
@@ -52,10 +53,10 @@ class MainActivity : AppCompatActivity() {
         override fun onLocationChanged(location: Location) {
             val pt = GeoPoint(location.latitude, location.longitude)
             monMarqueur?.position = pt
-            mapView.controller.setCenter(pt)
+            mapView?.controller?.setCenter(pt)
             tvVitesse.text = "🟦 Ma vitesse : ${(location.speed * 3.6).roundToInt()} km/h"
             tvStatut.text = "✅ Position : %.4f, %.4f".format(location.latitude, location.longitude)
-            mapView.invalidate()
+            mapView?.invalidate()
         }
         override fun onStatusChanged(p0: String?, p1: Int, p2: Bundle?) {}
         override fun onProviderEnabled(p0: String) {}
@@ -64,13 +65,17 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_main)
-        initialiserTout()
+        
+        try {
+            setContentView(R.layout.activity_main)
+            initialiserTout()
+        } catch (e: Exception) {
+            Toast.makeText(this, "❌ Erreur démarrage : ${e.message}", Toast.LENGTH_LONG).show()
+            e.printStackTrace()
+        }
     }
 
     private fun initialiserTout() {
-        Configuration.getInstance().load(this, PreferenceManager.getDefaultSharedPreferences(this))
-        
         tvStatut = findViewById(R.id.tvStatut)
         tvVitesse = findViewById(R.id.tvVitesse)
         btnStart = findViewById(R.id.btnStart)
@@ -78,25 +83,35 @@ class MainActivity : AppCompatActivity() {
         btnStartDist = findViewById(R.id.btnStartDist)
         btnStopDist = findViewById(R.id.btnStopDist)
         etNumeroDest = findViewById(R.id.etNumeroDest)
-        mapView = findViewById(R.id.mapView)
-
+        
         etNumeroDest.setText(PreferenceManager.getDefaultSharedPreferences(this).getString("numero_dest", ""))
 
-        mapView.setTileSource(TileSourceFactory.MAPNIK)
-        mapView.setMultiTouchControls(true)
-        mapView.controller.setZoom(15.0)
+        // 🗺️ Initialisation CARTE avec TRY/CATCH complet
+        try {
+            Configuration.getInstance().load(this, PreferenceManager.getDefaultSharedPreferences(this))
+            mapView = findViewById(R.id.mapView)
+            
+            mapView?.setTileSource(TileSourceFactory.MAPNIK)
+            mapView?.setMultiTouchControls(true)
+            mapView?.controller?.setZoom(15.0)
 
-        monMarqueur = Marker(mapView)
-        monMarqueur?.icon = ContextCompat.getDrawable(this, android.R.drawable.ic_menu_mylocation)
-        monMarqueur?.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
-        monMarqueur?.title = "🟦 MOI"
-        mapView.overlays.add(monMarqueur)
+            monMarqueur = Marker(mapView)
+            monMarqueur?.icon = ContextCompat.getDrawable(this, android.R.drawable.ic_menu_mylocation)
+            monMarqueur?.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
+            monMarqueur?.title = "🟦 MOI"
+            mapView?.overlays?.add(monMarqueur)
 
-        autreMarqueur = Marker(mapView)
-        autreMarqueur?.icon = ContextCompat.getDrawable(this, android.R.drawable.ic_menu_compass)
-        autreMarqueur?.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
-        autreMarqueur?.title = "🟥 L'AUTRE"
-        mapView.overlays.add(autreMarqueur)
+            autreMarqueur = Marker(mapView)
+            autreMarqueur?.icon = ContextCompat.getDrawable(this, android.R.drawable.ic_menu_compass)
+            autreMarqueur?.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
+            autreMarqueur?.title = "🟥 L'AUTRE"
+            mapView?.overlays?.add(autreMarqueur)
+            
+            Log.d("BloomGPS", "✅ Carte initialisée")
+        } catch (e: Exception) {
+            Toast.makeText(this, "⚠️ Carte indisponible", Toast.LENGTH_SHORT).show()
+            Log.e("BloomGPS", "Erreur carte", e)
+        }
 
         locationManager = getSystemService(Context.LOCATION_SERVICE) as LocationManager
         registerReceiver(autreUpdateReceiver, IntentFilter("BLOOMGPS_AUTRE_UPDATE"))
@@ -112,7 +127,7 @@ class MainActivity : AppCompatActivity() {
     private fun demarrerGPS() {
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
             try {
-                locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 3000, 5f, monGpsListener)
+                locationManager?.requestLocationUpdates(LocationManager.GPS_PROVIDER, 3000, 5f, monGpsListener)
                 tvStatut.text = "✅ GPS actif — En attente de position..."
             } catch (e: Exception) {
                 tvStatut.text = "⚠️ GPS indisponible"
@@ -129,7 +144,7 @@ class MainActivity : AppCompatActivity() {
                 autreMarqueur?.position = GeoPoint(lat, lon)
                 tvStatut.text = "🟥 Autre : %.4f, %.4f".format(lat, lon)
                 tvVitesse.text = "🟦 Ma vitesse | 🟥 Vitesse autre : ${(vit * 3.6).roundToInt()} km/h"
-                mapView.invalidate()
+                mapView?.invalidate()
                 Toast.makeText(this@MainActivity, "📥 Position reçue !", Toast.LENGTH_SHORT).show()
             }
         }
@@ -216,6 +231,17 @@ class MainActivity : AppCompatActivity() {
     override fun onDestroy() {
         super.onDestroy()
         try { unregisterReceiver(autreUpdateReceiver) } catch (e: Exception) {}
-        try { locationManager.removeUpdates(monGpsListener) } catch (e: Exception) {}
+        try { locationManager?.removeUpdates(monGpsListener) } catch (e: Exception) {}
+        mapView?.onPause()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        mapView?.onResume()
+    }
+
+    override fun onPause() {
+        super.onPause()
+        mapView?.onPause()
     }
 }
