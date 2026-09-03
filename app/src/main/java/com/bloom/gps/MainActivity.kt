@@ -15,7 +15,6 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.preference.PreferenceManager
-import androidx.preference.Preference
 import org.osmdroid.config.Configuration
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.util.GeoPoint
@@ -66,13 +65,11 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        
         try {
             setContentView(R.layout.activity_main)
             initialiserTout()
         } catch (e: Exception) {
             Toast.makeText(this, "❌ Erreur démarrage : ${e.message}", Toast.LENGTH_LONG).show()
-            e.printStackTrace()
         }
     }
 
@@ -87,7 +84,6 @@ class MainActivity : AppCompatActivity() {
         
         etNumeroDest.setText(PreferenceManager.getDefaultSharedPreferences(this).getString("numero_dest", ""))
 
-        // 🗺️ Initialisation CARTE avec TRY/CATCH complet
         try {
             Configuration.getInstance().load(this, PreferenceManager.getDefaultSharedPreferences(this))
             mapView = findViewById(R.id.mapView)
@@ -107,11 +103,8 @@ class MainActivity : AppCompatActivity() {
             autreMarqueur?.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
             autreMarqueur?.title = "🟥 L'AUTRE"
             mapView?.overlays?.add(autreMarqueur)
-            
-            Log.d("BloomGPS", "✅ Carte initialisée")
         } catch (e: Exception) {
             Toast.makeText(this, "⚠️ Carte indisponible", Toast.LENGTH_SHORT).show()
-            Log.e("BloomGPS", "Erreur carte", e)
         }
 
         locationManager = getSystemService(Context.LOCATION_SERVICE) as LocationManager
