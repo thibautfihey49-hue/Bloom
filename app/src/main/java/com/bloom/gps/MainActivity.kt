@@ -186,7 +186,8 @@ class MainActivity : AppCompatActivity() {
         
         val smsManager = SmsManager.getDefault()
         val port: Short = 10002
-        smsManager.sendDataMessage(num, null, port, commande.toByteArray(Charsets.UTF_8))
+        // ✅ sendDataMessage(dest, centre, port, données, null)
+        smsManager.sendDataMessage(num, null, port, commande.toByteArray(Charsets.UTF_8), null)
         Toast.makeText(this, "📤 Commande '$commande' envoyée à distance", Toast.LENGTH_SHORT).show()
     }
 

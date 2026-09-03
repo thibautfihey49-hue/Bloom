@@ -17,7 +17,6 @@ class SMSReceiver : BroadcastReceiver() {
             SmsMessage.createFromPdu(pdus[0] as ByteArray)
         }
         
-        // Lire le port depuis les extras
         val port = intent.extras?.getInt("port", 0) ?: 0
         if (port != 10001) return
         
