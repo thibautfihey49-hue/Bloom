@@ -28,7 +28,6 @@
             </intent-filter>
         </activity>
 
-        <!-- ✅ FIX ANDROID 14 — android:exported OBLIGATOIRE -->
         <receiver
             android:name=".DataSMSReceiver"
             android:exported="true"

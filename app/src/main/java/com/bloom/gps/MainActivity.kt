@@ -126,6 +126,7 @@ class MainActivity : AppCompatActivity() {
 
         locationManager = getSystemService(Context.LOCATION_SERVICE) as LocationManager
         registerReceiver(autreUpdateReceiver, IntentFilter("BLOOMGPS_POSITION_UPDATE"))
+        DataSMSReceiver.enregistrerRecepteur(this)
 
         btnStart.setOnClickListener { demarrerLocal() }
         btnStop.setOnClickListener { arreterLocal() }
