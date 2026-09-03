@@ -17,7 +17,7 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
-import androidx.preference.PreferenceManager
+import androidx.preference.PreferenceManager  // ✅ Bon import
 import org.osmdroid.config.Configuration
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.util.GeoPoint
@@ -65,7 +65,7 @@ class MainActivity : AppCompatActivity() {
         etNumeroDest = findViewById(R.id.etNumeroDest)
         mapView = findViewById(R.id.mapView)
 
-        val prefs = getSharedPreferences("BloomGPS", Context.MODE_PRIVATE)
+        val prefs = PreferenceManager.getDefaultSharedPreferences(this)
         etNumeroDest.setText(prefs.getString("numero_dest", ""))
 
         btnStart.setOnClickListener { demarrerLocal() }
@@ -160,7 +160,8 @@ class MainActivity : AppCompatActivity() {
     private fun demarrerLocal() {
         val num = etNumeroDest.text.toString().trim()
         if (num.isEmpty()) { Toast.makeText(this, "⚠️ Entrez le numéro de l'autre téléphone", Toast.LENGTH_SHORT).show(); return }
-        getSharedPreferences("BloomGPS", Context.MODE_PRIVATE).edit().putString("numero_dest", num).apply()
+        val prefs = PreferenceManager.getDefaultSharedPreferences(this)
+        prefs.edit().putString("numero_dest", num).apply()
         
         val intent = Intent(this, LocationTrackerService::class.java)
         intent.putExtra("commande", "START")
@@ -180,7 +181,8 @@ class MainActivity : AppCompatActivity() {
     private fun envoyerCommande(commande: String) {
         val num = etNumeroDest.text.toString().trim()
         if (num.isEmpty()) { Toast.makeText(this, "⚠️ Entrez le numéro", Toast.LENGTH_SHORT).show(); return }
-        getSharedPreferences("BloomGPS", Context.MODE_PRIVATE).edit().putString("numero_dest", num).apply()
+        val prefs = PreferenceManager.getDefaultSharedPreferences(this)
+        prefs.edit().putString("numero_dest", num).apply()
         
         val smsManager = SmsManager.getDefault()
         val message = "BLOOMGPS_CMD:$commande"
