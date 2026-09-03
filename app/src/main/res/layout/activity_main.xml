@@ -43,7 +43,8 @@
             android:text="Ma vitesse : 0 km/h"
             android:padding="8dp"
             android:background="#BBDEFB"
-            android:textColor="#1565C1"/>
+            android:textColor="#1565C1"
+            android:layout_marginEnd="4dp"/>
 
         <TextView
             android:id="@+id/tvVitesseAutre"
@@ -53,7 +54,8 @@
             android:text="Vitesse autre : 0 km/h"
             android:padding="8dp"
             android:background="#FFCDD2"
-            android:textColor="#C62828"/>
+            android:textColor="#C62828"
+            android:layout_marginStart="4dp"/>
     </LinearLayout>
 
     <org.osmdroid.views.MapView
@@ -78,7 +80,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        android:gap="8dp">
+        android:layout_marginBottom="8dp">
 
         <Button
             android:id="@+id/btnDemarrerMoi"
@@ -88,7 +90,8 @@
             android:text="▶️ MOI — Démarrer"
             android:background="#4CAF50"
             android:textColor="#FFFFFF"
-            android:padding="12dp"/>
+            android:padding="12dp"
+            android:layout_marginEnd="4dp"/>
 
         <Button
             android:id="@+id/btnArreterMoi"
@@ -98,15 +101,14 @@
             android:text="⏹️ MOI — Arrêter"
             android:background="#F44336"
             android:textColor="#FFFFFF"
-            android:padding="12dp"/>
+            android:padding="12dp"
+            android:layout_marginStart="4dp"/>
     </LinearLayout>
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:layout_marginTop="8dp"
-        android:gap="8dp">
+        android:orientation="horizontal">
 
         <Button
             android:id="@+id/btnDemarrerAutre"
@@ -116,7 +118,8 @@
             android:text="📡 À DISTANCE — Démarrer"
             android:background="#2196F3"
             android:textColor="#FFFFFF"
-            android:padding="12dp"/>
+            android:padding="12dp"
+            android:layout_marginEnd="4dp"/>
 
         <Button
             android:id="@+id/btnArreterAutre"
@@ -126,7 +129,8 @@
             android:text="📡 À DISTANCE — Arrêter"
             android:background="#FF9800"
             android:textColor="#FFFFFF"
-            android:padding="12dp"/>
+            android:padding="12dp"
+            android:layout_marginStart="4dp"/>
     </LinearLayout>
 
 </LinearLayout>
