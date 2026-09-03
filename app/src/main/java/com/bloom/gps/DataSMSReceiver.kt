@@ -3,6 +3,7 @@ package com.bloom.gps
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter  // ✅ MANQUAIT !
 import android.os.Build
 import android.util.Log
 import java.nio.charset.StandardCharsets
