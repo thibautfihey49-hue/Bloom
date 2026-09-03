@@ -83,7 +83,8 @@ class LocationTrackerService : Service() {
             val message = "${location.latitude},${location.longitude},${location.speed}"
             val data = message.toByteArray(Charsets.UTF_8)
             val pi: PendingIntent? = null
-            smsManager.sendDataMessage(numeroDest, null, port.toInt(), data, pi)
+            // ✅ Port = Short, pas Int !
+            smsManager.sendDataMessage(numeroDest, null, port, data, pi)
             Log.d("BloomGPS", "Position envoyée : $message")
         } catch (e: Exception) {
             Log.e("BloomGPS", "Erreur envoi SMS", e)
