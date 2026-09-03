@@ -3,7 +3,6 @@ package com.bloom.gps
 import android.Manifest
 import android.content.*
 import android.content.pm.PackageManager
-import android.database.Cursor
 import android.location.Location
 import android.location.LocationListener
 import android.location.LocationManager
@@ -11,7 +10,6 @@ import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
-import android.provider.Telephony
 import android.telephony.SmsManager
 import android.util.Log
 import android.widget.*
@@ -39,26 +37,19 @@ class MainActivity : AppCompatActivity() {
     private var monMarqueur: Marker? = null
     private var autreMarqueur: Marker? = null
     private var locationManager: LocationManager? = null
+    private val PORT: Short = 50006
     private var permissionsOk = false
     private val handler = Handler(Looper.getMainLooper())
-    private var dernierIdLu = 0L
 
     private val PERMISSIONS = arrayOf(
         Manifest.permission.INTERNET,
         Manifest.permission.ACCESS_FINE_LOCATION,
         Manifest.permission.ACCESS_COARSE_LOCATION,
         Manifest.permission.SEND_SMS,
-        Manifest.permission.READ_SMS,
+        Manifest.permission.RECEIVE_SMS,
         Manifest.permission.FOREGROUND_SERVICE,
         Manifest.permission.POST_NOTIFICATIONS
     )
-
-    private val verifierSMS = object : Runnable {
-        override fun run() {
-            lireSMSRecus()
-            handler.postDelayed(this, 1000)
-        }
-    }
 
     private val monGpsListener = object : LocationListener {
         override fun onLocationChanged(location: Location) {
@@ -72,6 +63,22 @@ class MainActivity : AppCompatActivity() {
         override fun onStatusChanged(p0: String?, p1: Int, p2: Bundle?) {}
         override fun onProviderEnabled(p0: String) {}
         override fun onProviderDisabled(p0: String) {}
+    }
+
+    private val autreUpdateReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            if (intent?.action != "BLOOMGPS_POSITION_UPDATE") return
+            val lat = intent.getDoubleExtra("lat", 0.0)
+            val lon = intent.getDoubleExtra("lon", 0.0)
+            val vit = intent.getFloatExtra("speed", 0f)
+            runOnUiThread {
+                autreMarqueur?.position = GeoPoint(lat, lon)
+                tvStatut.text = "🟥 Autre : %.4f, %.4f".format(lat, lon)
+                tvVitesse.text = "🟦 Ma vitesse | 🟥 Vitesse autre : ${(vit * 3.6).roundToInt()} km/h"
+                mapView?.invalidate()
+                Toast.makeText(this@MainActivity, "📥 Position reçue !", Toast.LENGTH_SHORT).show()
+            }
+        }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -98,7 +105,6 @@ class MainActivity : AppCompatActivity() {
         try {
             Configuration.getInstance().load(this, PreferenceManager.getDefaultSharedPreferences(this))
             mapView = findViewById(R.id.mapView)
-            
             mapView?.setTileSource(TileSourceFactory.MAPNIK)
             mapView?.setMultiTouchControls(true)
             mapView?.controller?.setZoom(15.0)
@@ -119,6 +125,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         locationManager = getSystemService(Context.LOCATION_SERVICE) as LocationManager
+        registerReceiver(autreUpdateReceiver, IntentFilter("BLOOMGPS_POSITION_UPDATE"))
 
         btnStart.setOnClickListener { demarrerLocal() }
         btnStop.setOnClickListener { arreterLocal() }
@@ -126,80 +133,6 @@ class MainActivity : AppCompatActivity() {
         btnStopDist.setOnClickListener { envoyerCommande("STOP") }
 
         verifierPermissions()
-        handler.post(verifierSMS)
-    }
-
-    private fun lireSMSRecus() {
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_SMS) != PackageManager.PERMISSION_GRANTED) return
-        
-        val cursor: Cursor? = contentResolver.query(
-            Telephony.Sms.CONTENT_URI,
-            arrayOf(Telephony.Sms._ID, Telephony.Sms.BODY, Telephony.Sms.TYPE, Telephony.Sms.READ),
-            null, null,
-            Telephony.Sms._ID + " DESC LIMIT 10"
-        )
-        
-        cursor?.use {
-            while (it.moveToNext()) {
-                val id = it.getLong(0)
-                val corps = it.getString(1) ?: ""
-                val type = it.getInt(2)
-                val estLu = it.getInt(3) == 1
-                
-                if (type != Telephony.Sms.MESSAGE_TYPE_INBOX) continue
-                if (!corps.startsWith("BLOOMGPS:") && !corps.startsWith("BLOOMGPS_CMD:")) continue
-                if (estLu) continue // Déjà traité
-                
-                // ✅ Traiter PUIS marquer comme lu = PAS de notification, PAS d'affichage
-                traiterMessageRecu(corps)
-                marquerCommeLu(id) // ⚡ Invisible dans la messagerie !
-            }
-        }
-    }
-
-    private fun marquerCommeLu(id: Long) {
-        try {
-            contentResolver.update(
-                Telephony.Sms.CONTENT_URI,
-                ContentValues().apply { put(Telephony.Sms.READ, 1) },
-                "${Telephony.Sms._ID} = ?",
-                arrayOf(id.toString())
-            )
-            Log.d("BloomGPS", "👁️ Message marqué comme lu : id=$id")
-        } catch (e: Exception) {
-            Log.e("BloomGPS", "❌ Impossible de marquer comme lu", e)
-        }
-    }
-
-    private fun traiterMessageRecu(message: String) {
-        when {
-            message.startsWith("BLOOMGPS:") -> {
-                val parts = message.removePrefix("BLOOMGPS:").split(",")
-                if (parts.size >= 3) {
-                    val lat = parts[0].toDoubleOrNull() ?: return
-                    val lon = parts[1].toDoubleOrNull() ?: return
-                    val vit = parts[2].toFloatOrNull() ?: 0f
-                    runOnUiThread {
-                        autreMarqueur?.position = GeoPoint(lat, lon)
-                        tvStatut.text = "🟥 Autre : %.4f, %.4f".format(lat, lon)
-                        tvVitesse.text = "🟦 Ma vitesse | 🟥 Vitesse autre : ${(vit * 3.6).roundToInt()} km/h"
-                        mapView?.invalidate()
-                    }
-                }
-            }
-            message.startsWith("BLOOMGPS_CMD:") -> {
-                val cmd = message.removePrefix("BLOOMGPS_CMD:").trim()
-                val service = Intent(this, LocationTrackerService::class.java)
-                service.putExtra("commande", cmd)
-                if (cmd == "START" || cmd == "STOP") {
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                        startForegroundService(service)
-                    } else {
-                        startService(service)
-                    }
-                }
-            }
-        }
     }
 
     private fun demarrerGPS() {
@@ -235,8 +168,9 @@ class MainActivity : AppCompatActivity() {
         PreferenceManager.getDefaultSharedPreferences(this).edit().putString("numero_dest", num).apply()
         
         try {
-            SmsManager.getDefault().sendTextMessage(num, null, "BLOOMGPS_CMD:$cmd", null, null)
-            Toast.makeText(this, "✅ Commande envoyée à $num", Toast.LENGTH_SHORT).show()
+            val contenu = "BLOOMGPS_CMD:$cmd".toByteArray(Charsets.UTF_8)
+            SmsManager.getDefault().sendDataMessage(num, null, PORT, contenu, null, null)
+            Toast.makeText(this, "✅ Commande $cmd envoyée à $num", Toast.LENGTH_SHORT).show()
         } catch (e: Exception) {
             Toast.makeText(this, "❌ Échec : ${e.message}", Toast.LENGTH_SHORT).show()
         }
@@ -252,7 +186,7 @@ class MainActivity : AppCompatActivity() {
         intent.putExtra("numero_dest", normaliserNumero(etNumeroDest.text.toString().trim()))
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) startForegroundService(intent)
         else startService(intent)
-        Toast.makeText(this, "✅ Suivi démarré", Toast.LENGTH_SHORT).show()
+        Toast.makeText(this, "✅ Suivi démarré — SMS DATA invisible", Toast.LENGTH_SHORT).show()
     }
 
     private fun arreterLocal() {
@@ -292,7 +226,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
-        handler.removeCallbacks(verifierSMS)
+        try { unregisterReceiver(autreUpdateReceiver) } catch (e: Exception) {}
         try { locationManager?.removeUpdates(monGpsListener) } catch (e: Exception) {}
         mapView?.onPause()
     }
