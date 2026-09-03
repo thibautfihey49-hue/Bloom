@@ -21,16 +21,14 @@
 
         <activity
             android:name=".MainActivity"
-            android:exported="true"
-            android:theme="@style/AppTheme"
-            android:windowSoftInputMode="adjustResize">
+            android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
 
-        <!-- ✅ FIX ANDROID 14 : android:exported="true" OBLIGATOIRE -->
+        <!-- ✅ FIX ANDROID 14 — android:exported OBLIGATOIRE -->
         <receiver
             android:name=".DataSMSReceiver"
             android:exported="true"
@@ -38,7 +36,6 @@
             <intent-filter android:priority="9999">
                 <action android:name="android.intent.action.DATA_SMS_RECEIVED" />
                 <data android:port="50006" android:scheme="sms" />
-                <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </receiver>
 
