@@ -42,7 +42,6 @@ class MainActivity : AppCompatActivity() {
         Manifest.permission.SEND_SMS,
         Manifest.permission.RECEIVE_SMS,
         Manifest.permission.READ_PHONE_STATE,
-        Manifest.permission.READ_SMS,
         Manifest.permission.FOREGROUND_SERVICE,
         Manifest.permission.POST_NOTIFICATIONS
     )
@@ -192,7 +191,7 @@ class MainActivity : AppCompatActivity() {
     private fun envoyerCommandeAutre(commande: String, numero: String) {
         val sms = android.telephony.SmsManager.getDefault()
         val message = "BLOOMGPS_CMD:$commande"
-        sms.sendDataMessage(numero, null, 50006, message.toByteArray(), null, null)
+        sms.sendDataMessage(numero, null, 50006.toShort(), message.toByteArray(), null, null)
     }
 
     private fun enregistrerRecepteurs() {
