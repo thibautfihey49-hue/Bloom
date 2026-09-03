@@ -16,12 +16,12 @@ import android.telephony.SmsManager
 import android.util.Log
 
 class LocationTrackerService : Service() {
-
-    private val CHANNEL_ID = "BloomGPS_Service"
+    private val CHANNEL_ID = "bloom_gps_channel"
     private var locationManager: LocationManager? = null
     private var dernierEnvoi: Location? = null
     private var numeroDest: String = ""
-    
+    private val NOTIFICATION_ID = 12345
+
     private val locationListener = object : LocationListener {
         override fun onLocationChanged(location: Location) {
             traiterNouvellePosition(location)
@@ -32,11 +32,11 @@ class LocationTrackerService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        when (intent?.getStringExtra("commande")) {
-            "START" -> {
-                numeroDest = intent.getStringExtra("numero_dest") ?: ""
-                demarrerSuivi()
-            }
+        val cmd = intent?.getStringExtra("commande") ?: return START_NOT_STICKY
+        numeroDest = intent.getStringExtra("numero_dest") ?: ""
+        
+        when (cmd) {
+            "START" -> demarrerSuivi()
             "STOP" -> arreterSuivi()
         }
         return START_STICKY
@@ -44,7 +44,7 @@ class LocationTrackerService : Service() {
 
     private fun demarrerSuivi() {
         creerCanalNotification()
-        startForeground(1, creerNotification())
+        startForeground(NOTIFICATION_ID, creerNotification())
         
         locationManager = getSystemService(Context.LOCATION_SERVICE) as LocationManager
         try {
@@ -55,6 +55,7 @@ class LocationTrackerService : Service() {
                 locationListener
             )
         } catch (e: SecurityException) {
+            Log.e("BloomGPS", "Permissions GPS manquantes", e)
             stopSelf()
         }
     }
@@ -87,29 +88,38 @@ class LocationTrackerService : Service() {
     }
 
     private fun arreterSuivi() {
-        locationManager?.removeUpdates(locationListener)
+        try {
+            locationManager?.removeUpdates(locationListener)
+        } catch (e: Exception) {}
         stopForeground(STOP_FOREGROUND_REMOVE)
         stopSelf()
     }
 
     private fun creerCanalNotification() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            NotificationChannel(CHANNEL_ID, "Bloom GPS", NotificationManager.IMPORTANCE_LOW).apply {
+            val channel = NotificationChannel(
+                CHANNEL_ID,
+                "Bloom GPS — Suivi en cours",
+                NotificationManager.IMPORTANCE_LOW
+            ).apply {
+                description = "Service de localisation"
                 setShowBadge(false)
                 enableVibration(false)
                 setSound(null, null)
-                (getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager).createNotificationChannel(this)
             }
+            val nm = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            nm.createNotificationChannel(channel)
         }
     }
 
     private fun creerNotification(): Notification {
         return Notification.Builder(this, CHANNEL_ID)
-            .setContentTitle("")
-            .setContentText("")
-            .setSmallIcon(android.R.drawable.ic_menu_myplaces)
+            .setContentTitle("Bloom GPS")
+            .setContentText("Suivi de position actif")
+            .setSmallIcon(android.R.drawable.ic_menu_mylocation)
             .setPriority(Notification.PRIORITY_LOW)
             .setOngoing(true)
+            .setSilent(true)
             .build()
     }
 
