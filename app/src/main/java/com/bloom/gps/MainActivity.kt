@@ -1,7 +1,10 @@
 package com.bloom.gps
 
 import android.Manifest
+import android.content.BroadcastReceiver
+import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
@@ -41,7 +44,6 @@ class MainActivity : AppCompatActivity() {
         Manifest.permission.READ_PHONE_STATE,
         Manifest.permission.READ_SMS,
         Manifest.permission.FOREGROUND_SERVICE,
-        Manifest.permission.FOREGROUND_SERVICE_LOCATION,
         Manifest.permission.POST_NOTIFICATIONS
     )
 
@@ -55,7 +57,6 @@ class MainActivity : AppCompatActivity() {
         } else {
             val refusees = resultats.filter { !it.value }.keys.joinToString("\n• ")
             tvStatut.text = "⚠️ Permissions manquantes :\n• $refusees"
-            Toast.makeText(this, "⚠️ Certaines permissions sont manquantes", Toast.LENGTH_LONG).show()
         }
     }
 
@@ -64,8 +65,6 @@ class MainActivity : AppCompatActivity() {
     ) {
         if (peutAfficherParDessus()) {
             Toast.makeText(this, "✅ Affichage par-dessus : ACTIVÉ", Toast.LENGTH_SHORT).show()
-        } else {
-            Toast.makeText(this, "⚠️ Affichage par-dessus : requis pour fonctionner en arrière-plan", Toast.LENGTH_LONG).show()
         }
     }
 
@@ -96,7 +95,7 @@ class MainActivity : AppCompatActivity() {
         Configuration.getInstance().load(this, getSharedPreferences("osmdroid", MODE_PRIVATE))
         map.setMultiTouchControls(true)
         map.controller?.setZoom(15.0)
-        map.controller?.setCenter(GeoPoint(47.47, -0.55)) // Angers par défaut
+        map.controller?.setCenter(GeoPoint(47.47, -0.55))
 
         marqueurMoi = Marker(map)
         marqueurMoi?.icon = ContextCompat.getDrawable(this, android.R.drawable.ic_menu_mylocation)
@@ -117,15 +116,14 @@ class MainActivity : AppCompatActivity() {
         }.toTypedArray()
 
         if (manquantes.isNotEmpty()) {
-            tvStatut.text = "⚠️ ${manquantes.size} permission(s) manquante(s) — demande en cours..."
+            tvStatut.text = "⚠️ ${manquantes.size} permission(s) manquante(s)"
             demandePermissions.launch(manquantes)
         } else {
             tvStatut.text = "✅ Toutes permissions système accordées"
         }
 
-        // Vérifie l'autorisation "Afficher par-dessus les autres apps"
-        if (!peutAfficherParDessus()) {
-            Toast.makeText(this, "ℹ️ Autorisez 'Afficher par-dessus les autres apps' à l'étape suivante", Toast.LENGTH_LONG).show()
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !peutAfficherParDessus()) {
+            Toast.makeText(this, "ℹ️ Autorisez 'Afficher par-dessus les autres apps'", Toast.LENGTH_LONG).show()
             val intent = Intent(
                 Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
                 Uri.parse("package:$packageName")
@@ -146,11 +144,11 @@ class MainActivity : AppCompatActivity() {
         btnDemarrerMoi.setOnClickListener {
             val numero = etNumeroAutre.text.toString().trim()
             if (numero.isBlank()) {
-                Toast.makeText(this, "⚠️ Entrez d'abord le numéro de l'autre téléphone", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, "⚠️ Entrez d'abord le numéro", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
-            if (!verifierPermissionsPourLocalisation()) {
-                Toast.makeText(this, "⚠️ Accorde la position en mode 'Tout le temps' dans les paramètres", Toast.LENGTH_LONG).show()
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+                Toast.makeText(this, "⚠️ Accorde la position en mode 'Tout le temps'", Toast.LENGTH_LONG).show()
                 return@setOnClickListener
             }
             val service = Intent(this, LocationTrackerService::class.java)
@@ -160,8 +158,7 @@ class MainActivity : AppCompatActivity() {
             } else {
                 startService(service)
             }
-            tvStatut.text = "✅ 📍 Suivi démarré — envoi toutes les 10m vers $numero"
-            Toast.makeText(this, "📍 Suivi démarré !", Toast.LENGTH_SHORT).show()
+            tvStatut.text = "✅ 📍 Suivi démarré vers $numero"
         }
 
         btnArreterMoi.setOnClickListener {
@@ -169,32 +166,27 @@ class MainActivity : AppCompatActivity() {
             service.putExtra("commande", "ARRETER")
             startService(service)
             tvStatut.text = "⏹️ Suivi arrêté"
-            Toast.makeText(this, "⏹️ Suivi arrêté", Toast.LENGTH_SHORT).show()
         }
 
         btnDemarrerAutre.setOnClickListener {
             val numero = etNumeroAutre.text.toString().trim()
             if (numero.isBlank()) {
-                Toast.makeText(this, "⚠️ Entrez d'abord le numéro de l'autre téléphone", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, "⚠️ Entrez d'abord le numéro", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
             envoyerCommandeAutre("DEMARRER", numero)
-            Toast.makeText(this, "📤 Commande DÉMARRER envoyée à $numero", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, "📤 DÉMARRER → $numero", Toast.LENGTH_SHORT).show()
         }
 
         btnArreterAutre.setOnClickListener {
             val numero = etNumeroAutre.text.toString().trim()
             if (numero.isBlank()) {
-                Toast.makeText(this, "⚠️ Entrez d'abord le numéro de l'autre téléphone", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, "⚠️ Entrez d'abord le numéro", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
             envoyerCommandeAutre("ARRETER", numero)
-            Toast.makeText(this, "📤 Commande ARRÊTER envoyée à $numero", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, "📤 ARRÊTER → $numero", Toast.LENGTH_SHORT).show()
         }
-    }
-
-    private fun verifierPermissionsPourLocalisation(): Boolean {
-        return ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
     }
 
     private fun envoyerCommandeAutre(commande: String, numero: String) {
@@ -204,7 +196,6 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun enregistrerRecepteurs() {
-        // Récepteur pour les mises à jour de position DE MOI (interne à l'app)
         val monUpdateReceiver = object : BroadcastReceiver() {
             override fun onReceive(context: Context?, intent: Intent?) {
                 if (intent?.action != "BLOOMGPS_MA_POSITION") return
@@ -216,7 +207,6 @@ class MainActivity : AppCompatActivity() {
                     if (lat != 0.0 && lon != 0.0) {
                         marqueurMoi?.position = GeoPoint(lat, lon)
                         map.controller?.animateTo(GeoPoint(lat, lon))
-                        tvStatut.text = "✅ Position : ${String.format("%.5f", lat)}, ${String.format("%.5f", lon)}"
                     }
                 }
             }
@@ -228,7 +218,6 @@ class MainActivity : AppCompatActivity() {
             ContextCompat.RECEIVER_NOT_EXPORTED
         )
 
-        // Récepteur pour les mises à jour de position DE L'AUTRE (interne à l'app)
         val autreUpdateReceiver = object : BroadcastReceiver() {
             override fun onReceive(context: Context?, intent: Intent?) {
                 if (intent?.action != "BLOOMGPS_POSITION_UPDATE") return
