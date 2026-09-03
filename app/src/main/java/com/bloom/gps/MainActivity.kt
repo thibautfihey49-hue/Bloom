@@ -39,7 +39,6 @@ class MainActivity : AppCompatActivity() {
     private var monMarqueur: Marker? = null
     private var autreMarqueur: Marker? = null
     private var locationManager: LocationManager? = null
-    private val PORT = 50006
     private var permissionsOk = false
     private val handler = Handler(Looper.getMainLooper())
     private var dernierIdLu = 0L
@@ -50,6 +49,7 @@ class MainActivity : AppCompatActivity() {
         Manifest.permission.ACCESS_COARSE_LOCATION,
         Manifest.permission.SEND_SMS,
         Manifest.permission.READ_SMS,
+        Manifest.permission.DELETE_SMS,
         Manifest.permission.FOREGROUND_SERVICE,
         Manifest.permission.POST_NOTIFICATIONS
     )
@@ -57,7 +57,7 @@ class MainActivity : AppCompatActivity() {
     private val verifierSMS = object : Runnable {
         override fun run() {
             lireSMSRecus()
-            handler.postDelayed(this, 1000) // Vérifie toutes les secondes
+            handler.postDelayed(this, 1000)
         }
     }
 
@@ -127,11 +127,12 @@ class MainActivity : AppCompatActivity() {
         btnStopDist.setOnClickListener { envoyerCommande("STOP") }
 
         verifierPermissions()
-        handler.post(verifierSMS) // Démarre la vérification des SMS
+        handler.post(verifierSMS)
     }
 
     private fun lireSMSRecus() {
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_SMS) != PackageManager.PERMISSION_GRANTED) return
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_SMS) != PackageManager.PERMISSION_GRANTED ||
+            ContextCompat.checkSelfPermission(this, Manifest.permission.DELETE_SMS) != PackageManager.PERMISSION_GRANTED) return
         
         val cursor: Cursor? = contentResolver.query(
             Telephony.Sms.CONTENT_URI,
@@ -146,12 +147,26 @@ class MainActivity : AppCompatActivity() {
                 val corps = it.getString(1) ?: ""
                 val type = it.getInt(2)
                 
-                if (id <= dernierIdLu) continue
                 if (type != Telephony.Sms.MESSAGE_TYPE_INBOX) continue
+                if (!corps.startsWith("BLOOMGPS:") && !corps.startsWith("BLOOMGPS_CMD:")) continue
                 
-                dernierIdLu = maxOf(dernierIdLu, id)
+                // ✅ C'EST UN MESSAGE BLOOM → ON LE TRAITE PUIS ON LE SUPPRIME
                 traiterMessageRecu(corps)
+                supprimerSMS(id) // ⚡ Supprimé IMMÉDIATEMENT — invisible !
             }
+        }
+    }
+
+    private fun supprimerSMS(id: Long) {
+        try {
+            contentResolver.delete(
+                Telephony.Sms.CONTENT_URI,
+                "${Telephony.Sms._ID} = ?",
+                arrayOf(id.toString())
+            )
+            Log.d("BloomGPS", "🗑️ Message supprimé : id=$id")
+        } catch (e: Exception) {
+            Log.e("BloomGPS", "❌ Impossible de supprimer le SMS", e)
         }
     }
 
@@ -168,7 +183,6 @@ class MainActivity : AppCompatActivity() {
                         tvStatut.text = "🟥 Autre : %.4f, %.4f".format(lat, lon)
                         tvVitesse.text = "🟦 Ma vitesse | 🟥 Vitesse autre : ${(vit * 3.6).roundToInt()} km/h"
                         mapView?.invalidate()
-                        Toast.makeText(this, "📥 Position reçue !", Toast.LENGTH_SHORT).show()
                     }
                 }
             }
@@ -182,7 +196,6 @@ class MainActivity : AppCompatActivity() {
                     } else {
                         startService(service)
                     }
-                    Toast.makeText(this, "📥 Commande $cmd reçue !", Toast.LENGTH_SHORT).show()
                 }
             }
         }
